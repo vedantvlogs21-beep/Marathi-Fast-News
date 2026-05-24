@@ -31,7 +31,7 @@ if (process.env.GEMINI_API_KEY) {
   try {
     ai = new GoogleGenAI({
       apiKey: process.env.GEMINI_API_KEY,
-      httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+      httpOptions: { headers: { 'User-Agent': 'marathi-fast-news' } }
     });
     console.log("Gemini AI successfully initialized.");
   } catch (err) {

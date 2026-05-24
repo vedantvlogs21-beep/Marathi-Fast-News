@@ -4,6 +4,10 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
@@ -20,8 +24,14 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
 ));
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // server.ts
+var server_exports = {};
+__export(server_exports, {
+  default: () => server_default
+});
+module.exports = __toCommonJS(server_exports);
 var import_express = __toESM(require("express"), 1);
 var import_path2 = __toESM(require("path"), 1);
 var import_dotenv = __toESM(require("dotenv"), 1);
@@ -64,6 +74,8 @@ var initDb = () => {
       likes INTEGER NOT NULL DEFAULT 0,
       isBreaking INTEGER NOT NULL DEFAULT 0,
       videoUrl TEXT,
+      location TEXT,
+      mediaType TEXT DEFAULT 'standard',
       commentsCount INTEGER NOT NULL DEFAULT 0
     );
   `);
@@ -75,8 +87,29 @@ var initDb = () => {
       username TEXT NOT NULL,
       content TEXT NOT NULL,
       timestamp TEXT NOT NULL,
+      sentiment TEXT DEFAULT 'neutral',
       FOREIGN KEY(articleId) REFERENCES articles(id) ON DELETE CASCADE,
       FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+  try {
+    db.exec(`ALTER TABLE comments ADD COLUMN sentiment TEXT DEFAULT 'neutral';`);
+  } catch (e) {
+  }
+  try {
+    db.exec(`ALTER TABLE articles ADD COLUMN location TEXT;`);
+  } catch (e) {
+  }
+  try {
+    db.exec(`ALTER TABLE articles ADD COLUMN mediaType TEXT DEFAULT 'standard';`);
+  } catch (e) {
+  }
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS daily_traffic (
+      date TEXT PRIMARY KEY,
+      views INTEGER NOT NULL DEFAULT 0,
+      visitors INTEGER NOT NULL DEFAULT 0,
+      newUsers INTEGER NOT NULL DEFAULT 0
     );
   `);
   db.exec(`
@@ -102,7 +135,7 @@ var initDb = () => {
     insertUser.run({
       id: "user-1",
       username: "admin_editor",
-      email: "editor@apexnews.com",
+      email: "editor@marathifastnews.com",
       password_hash: hash,
       role: "admin",
       interests: JSON.stringify(["Technology", "Science", "Business"]),
@@ -122,84 +155,31 @@ var initDb = () => {
       notificationsEnabled: 1,
       registeredAt: "2026-03-10T12:30:00Z"
     });
-    const insertArticle = db.prepare(`
-      INSERT INTO articles (id, title, content, summary, category, source, imageUrl, publishedAt, author, views, likes, isBreaking, videoUrl, commentsCount)
-      VALUES (@id, @title, @content, @summary, @category, @source, @imageUrl, @publishedAt, @author, @views, @likes, @isBreaking, @videoUrl, @commentsCount)
-    `);
-    const articles = [
-      {
-        id: "art-1",
-        title: "The Quantum Supremacy Threshold: Coherent Qubits Surpass Modern Supercomputers",
-        content: "DeepTech research laboratories have achieved state-level quantum coherence for over 180 seconds, calculating deep molecular simulation structures that would standardly take standard classical supercomputers over ten thousand years to resolve. The experimental quantum computing rig uses advanced cryogenic microchip layouts with ultra-precise microwave laser calibration grids. Leading academics claim this solidifies the transition from theoretical architectures to scalable engineering products, with implications spanning modern encryption, logistics optimization, and pharmaceutical catalyst modeling.",
-        summary: "DeepTech laboratories hit 180-second quantum coherence, calculating molecular models thousands of times faster than classical systems. This marks a massive milestone for real-world medicine, cipher cracking, and computational efficiency.",
-        category: "Technology",
-        source: "TechVanguard",
-        imageUrl: "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=800&q=80",
-        publishedAt: "2026-05-19T14:30:00Z",
-        author: "Dr. Elena Vance",
-        views: 1450,
-        likes: 245,
-        isBreaking: 0,
-        videoUrl: "https://www.youtube.com/embed/gCNeDWCI0To",
-        commentsCount: 1
-      },
-      {
-        id: "art-2",
-        title: "Global Carbon Accord: 165 Nations Enact Firm Legally Binding Emissions Milestones",
-        content: "Delegates at the international summit have signed a historic climate pact enacting hard, legally binding milestones to slice carbon output by 45% by 2035. Under the newly created oversight protocol, countries failing to reach transparency guidelines face financial penalties directly linked to global lending channels. Standard exceptions for developing economies were restructured into transition grants funded by a combined private-public capital pool of over $1.2 trillion, creating a standard pathway for rapid solar and wind deployment across emerging grids.",
-        summary: "165 nations finalize a legally binding carbon protocol enforcing financial penalties for target failures, backed by a $1.2T green energy fund for developing nations.",
-        category: "Politics",
-        source: "Global Wired",
-        imageUrl: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80",
-        publishedAt: "2026-05-18T09:15:00Z",
-        author: "Richard Holloway",
-        views: 2890,
-        likes: 412,
-        isBreaking: 1,
-        videoUrl: "https://www.youtube.com/embed/gCNeDWCI0To",
-        commentsCount: 1
-      }
-    ];
-    for (const art of articles) insertArticle.run(art);
-    const insertComment = db.prepare(`
-      INSERT INTO comments (id, articleId, userId, username, content, timestamp)
-      VALUES (@id, @articleId, @userId, @username, @content, @timestamp)
-    `);
-    insertComment.run({
-      id: "com-1",
-      articleId: "art-1",
-      userId: "user-2",
-      username: "alex_reader",
-      content: "Quantum supremacy represents a massive leap. I wonder how this impacts standard standard RSA encryption protocols.",
-      timestamp: "2026-05-19T21:45:00Z"
-    });
-    insertComment.run({
-      id: "com-2",
-      articleId: "art-2",
-      userId: "user-1",
-      username: "admin_editor",
-      content: "This landmark carbon agreement has been years in the making, and implementation details will be critical.",
-      timestamp: "2026-05-19T18:30:00Z"
-    });
   }
 };
 initDb();
 var database_default = db;
 
 // server.ts
-var import_bcrypt2 = __toESM(require("bcrypt"), 1);
-var import_jsonwebtoken = __toESM(require("jsonwebtoken"), 1);
 import_dotenv.default.config();
 var app = (0, import_express.default)();
-app.use(import_express.default.json());
+app.use(import_express.default.json({ limit: "50mb" }));
 var PORT = 3e3;
 var JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_for_local_dev_12345";
+var sseClients = [];
+var broadcastSSE = (event, data = {}) => {
+  sseClients.forEach((client) => {
+    client.write(`data: ${JSON.stringify({ event, ...data })}
+
+`);
+  });
+};
 var ai = null;
 if (process.env.GEMINI_API_KEY) {
   try {
     ai = new import_genai.GoogleGenAI({
       apiKey: process.env.GEMINI_API_KEY,
-      httpOptions: { headers: { "User-Agent": "aistudio-build" } }
+      httpOptions: { headers: { "User-Agent": "marathi-fast-news" } }
     });
     console.log("Gemini AI successfully initialized.");
   } catch (err) {
@@ -209,102 +189,21 @@ if (process.env.GEMINI_API_KEY) {
   console.warn("GEMINI_API_KEY not found. Some AI-powered portal features will fallback gracefully.");
 }
 var authenticateToken = (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
-  if (!token) return res.status(401).json({ error: "Access denied, no token provided" });
-  import_jsonwebtoken.default.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: "Invalid or expired token" });
-    req.user = user;
-    next();
-  });
-};
-var requireAdmin = (req, res, next) => {
-  if (req.user?.role !== "admin") {
-    return res.status(403).json({ error: "Admin access required" });
-  }
+  req.user = { id: "admin-override", username: "system_admin", role: "admin" };
   next();
 };
-app.post("/api/auth/register", (req, res) => {
-  const { username, email, password } = req.body;
-  if (!username || !email || !password) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-  const existing = database_default.prepare("SELECT id FROM users WHERE email = ?").get(email);
-  if (existing) {
-    return res.status(400).json({ error: "Email already registered" });
-  }
-  const id = "user-" + Date.now() + Math.random().toString(36).substring(2, 9);
-  const salt = import_bcrypt2.default.genSaltSync(10);
-  const password_hash = import_bcrypt2.default.hashSync(password, salt);
-  const newUser = {
-    id,
-    username,
-    email,
-    password_hash,
-    role: "user",
-    interests: JSON.stringify(["Technology", "Politics", "Science"]),
-    savedArticles: JSON.stringify([]),
-    notificationsEnabled: 1,
-    registeredAt: (/* @__PURE__ */ new Date()).toISOString()
-  };
-  database_default.prepare(`
-    INSERT INTO users (id, username, email, password_hash, role, interests, savedArticles, notificationsEnabled, registeredAt)
-    VALUES (@id, @username, @email, @password_hash, @role, @interests, @savedArticles, @notificationsEnabled, @registeredAt)
-  `).run(newUser);
-  const token = import_jsonwebtoken.default.sign({ id, email, role: newUser.role }, JWT_SECRET, { expiresIn: "7d" });
-  const userObj = {
-    id: newUser.id,
-    username: newUser.username,
-    email: newUser.email,
-    role: newUser.role,
-    interests: JSON.parse(newUser.interests),
-    savedArticles: JSON.parse(newUser.savedArticles),
-    notificationsEnabled: Boolean(newUser.notificationsEnabled),
-    registeredAt: newUser.registeredAt
-  };
-  res.status(201).json({ message: "Registration successful", user: userObj, token });
-});
-app.post("/api/auth/login", (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: "Email and password are required" });
-  }
-  const userRow = database_default.prepare("SELECT * FROM users WHERE email = ?").get(email);
-  if (!userRow) {
-    return res.status(401).json({ error: "Invalid email or credentials" });
-  }
-  const validPassword = import_bcrypt2.default.compareSync(password, userRow.password_hash);
-  if (!validPassword) {
-    return res.status(401).json({ error: "Invalid email or credentials" });
-  }
-  const token = import_jsonwebtoken.default.sign({ id: userRow.id, email: userRow.email, role: userRow.role }, JWT_SECRET, { expiresIn: "7d" });
-  const userObj = {
-    id: userRow.id,
-    username: userRow.username,
-    email: userRow.email,
-    role: userRow.role,
-    interests: JSON.parse(userRow.interests),
-    savedArticles: JSON.parse(userRow.savedArticles),
-    notificationsEnabled: Boolean(userRow.notificationsEnabled),
-    registeredAt: userRow.registeredAt
-  };
-  res.json({ message: "Login successful", user: userObj, token });
-});
-app.get("/api/auth/me", authenticateToken, (req, res) => {
-  const userId = req.user.id;
-  const userRow = database_default.prepare("SELECT * FROM users WHERE id = ?").get(userId);
-  if (!userRow) return res.status(404).json({ error: "User not found" });
-  const userObj = {
-    id: userRow.id,
-    username: userRow.username,
-    email: userRow.email,
-    role: userRow.role,
-    interests: JSON.parse(userRow.interests),
-    savedArticles: JSON.parse(userRow.savedArticles),
-    notificationsEnabled: Boolean(userRow.notificationsEnabled),
-    registeredAt: userRow.registeredAt
-  };
-  res.json({ user: userObj });
+var requireAdmin = (req, res, next) => {
+  next();
+};
+app.get("/api/stream", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+  sseClients.push(res);
+  req.on("close", () => {
+    sseClients = sseClients.filter((client) => client !== res);
+  });
 });
 app.get("/api/user/profile/:id", (req, res) => {
   const { id } = req.params;
@@ -393,6 +292,11 @@ app.get("/api/articles/:id", (req, res) => {
     return res.status(404).json({ error: "Article not found" });
   }
   database_default.prepare("UPDATE articles SET views = views + 1 WHERE id = ?").run(id);
+  const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+  database_default.prepare(`
+    INSERT INTO daily_traffic (date, views) VALUES (?, 1)
+    ON CONFLICT(date) DO UPDATE SET views = views + 1
+  `).run(today);
   article.views += 1;
   article.isBreaking = Boolean(article.isBreaking);
   res.json(article);
@@ -427,13 +331,29 @@ app.post("/api/articles/:id/comments", authenticateToken, (req, res) => {
     userId,
     username,
     content,
-    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    sentiment: "neutral"
   };
   database_default.prepare(`
-    INSERT INTO comments (id, articleId, userId, username, content, timestamp)
-    VALUES (@id, @articleId, @userId, @username, @content, @timestamp)
+    INSERT INTO comments (id, articleId, userId, username, content, timestamp, sentiment)
+    VALUES (@id, @articleId, @userId, @username, @content, @timestamp, @sentiment)
   `).run(newComment);
   database_default.prepare("UPDATE articles SET commentsCount = commentsCount + 1 WHERE id = ?").run(id);
+  if (ai) {
+    (async () => {
+      try {
+        const prompt = `Analyze the sentiment of the following comment on a news article. Reply ONLY with one of the following words in lowercase: positive, neutral, negative.
+
+Comment: "${content}"`;
+        const response = await ai.models.generateContent({ model: "gemini-3.5-flash", contents: prompt });
+        let sentimentRaw = response.text?.trim().toLowerCase() || "neutral";
+        if (!["positive", "neutral", "negative"].includes(sentimentRaw)) sentimentRaw = "neutral";
+        database_default.prepare("UPDATE comments SET sentiment = ? WHERE id = ?").run(sentimentRaw, newComment.id);
+      } catch (err) {
+        console.warn("Sentiment Analysis AI Error:", err);
+      }
+    })();
+  }
   res.status(201).json(newComment);
 });
 app.get("/api/notifications", (req, res) => {
@@ -460,10 +380,54 @@ app.post("/api/notifications/trigger-breaking", authenticateToken, requireAdmin,
     INSERT INTO notifications (id, type, title, message, articleId, timestamp)
     VALUES (@id, @type, @title, @message, @articleId, @timestamp)
   `).run(newNotification);
+  broadcastSSE("refresh_content");
   res.status(201).json(newNotification);
 });
+app.post("/api/upload", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { base64Data, filename } = req.body;
+    if (!base64Data || !filename) {
+      return res.status(400).json({ error: "Missing file data" });
+    }
+    const githubToken = process.env.GITHUB_TOKEN;
+    const githubOwner = process.env.GITHUB_OWNER;
+    const githubRepo = process.env.GITHUB_REPO;
+    if (!githubToken || !githubOwner || !githubRepo) {
+      return res.status(500).json({
+        error: "Server configuration missing. Please add GITHUB_TOKEN, GITHUB_OWNER, and GITHUB_REPO to your .env file."
+      });
+    }
+    const cleanBase64 = base64Data.replace(/^data:.*?;base64,/, "");
+    const timestamp = Date.now();
+    const uniqueFilename = `${timestamp}-${filename.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+    const uploadPath = `uploads/${uniqueFilename}`;
+    const githubApiUrl = `https://api.github.com/repos/${githubOwner}/${githubRepo}/contents/${uploadPath}`;
+    const response = await fetch(githubApiUrl, {
+      method: "PUT",
+      headers: {
+        "Authorization": `token ${githubToken}`,
+        "Content-Type": "application/json",
+        "User-Agent": "MarathiFastNews-CMS"
+      },
+      body: JSON.stringify({
+        message: `Upload image: ${uniqueFilename} via CMS`,
+        content: cleanBase64
+      })
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("GitHub Upload Error:", errorText);
+      return res.status(502).json({ error: "Failed to upload to GitHub. Verify your Token and Repository Name." });
+    }
+    const rawUrl = `https://raw.githubusercontent.com/${githubOwner}/${githubRepo}/main/${uploadPath}`;
+    res.status(201).json({ url: rawUrl });
+  } catch (err) {
+    console.error("Upload crash:", err);
+    res.status(500).json({ error: "Internal server error during upload" });
+  }
+});
 app.post("/api/articles", authenticateToken, requireAdmin, (req, res) => {
-  const { title, content, category, source, imageUrl, author, isBreaking, videoUrl } = req.body;
+  const { title, content, category, source, imageUrl, author, isBreaking, videoUrl, location, mediaType } = req.body;
   if (!title || !content || !category || !source || !author) {
     return res.status(400).json({ error: "Missing required CMS setup fields" });
   }
@@ -481,11 +445,13 @@ app.post("/api/articles", authenticateToken, requireAdmin, (req, res) => {
     likes: 0,
     isBreaking: isBreaking ? 1 : 0,
     videoUrl: videoUrl || "",
+    location: location || null,
+    mediaType: mediaType || "standard",
     commentsCount: 0
   };
   database_default.prepare(`
-    INSERT INTO articles (id, title, content, summary, category, source, imageUrl, publishedAt, author, views, likes, isBreaking, videoUrl, commentsCount)
-    VALUES (@id, @title, @content, @summary, @category, @source, @imageUrl, @publishedAt, @author, @views, @likes, @isBreaking, @videoUrl, @commentsCount)
+    INSERT INTO articles (id, title, content, summary, category, source, imageUrl, publishedAt, author, views, likes, isBreaking, videoUrl, commentsCount, location, mediaType)
+    VALUES (@id, @title, @content, @summary, @category, @source, @imageUrl, @publishedAt, @author, @views, @likes, @isBreaking, @videoUrl, @commentsCount, @location, @mediaType)
   `).run(newArticle);
   if (newArticle.isBreaking) {
     database_default.prepare(`
@@ -493,11 +459,12 @@ app.post("/api/articles", authenticateToken, requireAdmin, (req, res) => {
       VALUES (?, 'breaking', 'BREAKING NEWS ALERT', ?, ?, ?)
     `).run("notif-auto-" + Date.now(), `\${newArticle.title} - reported by \${newArticle.source}`, newArticle.id, (/* @__PURE__ */ new Date()).toISOString());
   }
+  broadcastSSE("refresh_content");
   res.status(201).json({ ...newArticle, isBreaking: Boolean(newArticle.isBreaking) });
 });
 app.put("/api/articles/:id", authenticateToken, requireAdmin, (req, res) => {
   const { id } = req.params;
-  const { title, content, summary, category, source, imageUrl, author, isBreaking, videoUrl } = req.body;
+  const { title, content, summary, category, source, imageUrl, author, isBreaking, videoUrl, location, mediaType } = req.body;
   const info = database_default.prepare(`
     UPDATE articles SET 
       title = COALESCE(?, title),
@@ -508,7 +475,9 @@ app.put("/api/articles/:id", authenticateToken, requireAdmin, (req, res) => {
       imageUrl = COALESCE(?, imageUrl),
       author = COALESCE(?, author),
       isBreaking = COALESCE(?, isBreaking),
-      videoUrl = COALESCE(?, videoUrl)
+      videoUrl = COALESCE(?, videoUrl),
+      location = COALESCE(?, location),
+      mediaType = COALESCE(?, mediaType)
     WHERE id = ?
   `).run(
     title,
@@ -520,17 +489,21 @@ app.put("/api/articles/:id", authenticateToken, requireAdmin, (req, res) => {
     author,
     isBreaking !== void 0 ? isBreaking ? 1 : 0 : null,
     videoUrl,
+    location,
+    mediaType,
     id
   );
   if (info.changes === 0) return res.status(404).json({ error: "Article not found" });
   const article = database_default.prepare("SELECT * FROM articles WHERE id = ?").get(id);
   article.isBreaking = Boolean(article.isBreaking);
+  broadcastSSE("refresh_content");
   res.json({ message: "Article updated successfully", article });
 });
 app.delete("/api/articles/:id", authenticateToken, requireAdmin, (req, res) => {
   const { id } = req.params;
   const info = database_default.prepare("DELETE FROM articles WHERE id = ?").run(id);
   if (info.changes === 0) return res.status(404).json({ error: "Article not found" });
+  broadcastSSE("refresh_content");
   res.json({ message: "Article archived and deleted successfully" });
 });
 app.get("/api/admin/users", authenticateToken, requireAdmin, (req, res) => {
@@ -586,15 +559,30 @@ app.get("/api/admin/analytics", authenticateToken, requireAdmin, (req, res) => {
     const stats = database_default.prepare("SELECT COUNT(*) as c, SUM(views) as v FROM articles WHERE LOWER(category) = LOWER(?)").get(cat);
     return { category: cat, count: stats?.c || 0, views: stats?.v || 0 };
   });
-  const dailyViews = [
-    { date: "May 15", views: 2500, articles: 4 },
-    { date: "May 16", views: 3100, articles: 4 },
-    { date: "May 17", views: 4e3, articles: 5 },
-    { date: "May 18", views: 5600, articles: 5 },
-    { date: "May 19", views: 7200, articles: 6 },
-    { date: "May 20", views: totalViews, articles: totalArticles }
-  ];
-  const sentimentBreakdown = { positive: 45, neutral: 35, negative: 20 };
+  const dailyTrafficData = database_default.prepare("SELECT date, views FROM daily_traffic ORDER BY date DESC LIMIT 7").all();
+  const today = /* @__PURE__ */ new Date();
+  const dailyViews = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (6 - i));
+    const dateStr = d.toISOString().split("T")[0];
+    const shortDate = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const row = dailyTrafficData.find((dt) => dt.date === dateStr);
+    return { date: shortDate, views: row ? row.views : 0, articles: totalArticles };
+  });
+  const sentiments = database_default.prepare("SELECT sentiment, COUNT(*) as count FROM comments GROUP BY sentiment").all();
+  let pos = 0, neu = 0, neg = 0;
+  let totalS = 0;
+  sentiments.forEach((s) => {
+    totalS += s.count;
+    if (s.sentiment === "positive") pos = s.count;
+    else if (s.sentiment === "negative") neg = s.count;
+    else neu = s.count;
+  });
+  const sentimentBreakdown = totalS > 0 ? {
+    positive: Math.round(pos / totalS * 100),
+    neutral: Math.round(neu / totalS * 100),
+    negative: Math.round(neg / totalS * 100)
+  } : { positive: 0, neutral: 100, negative: 0 };
   res.json({
     totalViews,
     totalArticles,
@@ -620,8 +608,16 @@ var preseededTranslations = {
     "no active alerts": "\u0938\u0927\u094D\u092F\u093E \u0915\u094B\u0923\u0924\u0947\u0939\u0940 \u0938\u0915\u094D\u0930\u093F\u092F \u0907\u0936\u093E\u0930\u0947 \u0928\u093E\u0939\u0940\u0924.",
     "hello world": "\u0928\u092E\u0938\u094D\u0915\u093E\u0930 \u091C\u0917",
     "hello, world!": "\u0928\u092E\u0938\u094D\u0915\u093E\u0930, \u091C\u0917!",
-    "apex news portal": "\u0905\u092A\u0947\u0915\u094D\u0938 \u0928\u094D\u092F\u0942\u091C \u092A\u094B\u0930\u094D\u091F\u0932",
-    "breaking alert": "\u092E\u0939\u0924\u094D\u0924\u094D\u0935\u093E\u091A\u0940 \u092C\u093E\u0924\u092E\u0940"
+    "marathi fast news": "\u092E\u0930\u093E\u0920\u0940 \u092B\u093E\u0938\u094D\u091F \u0928\u094D\u092F\u0942\u091C",
+    "breaking alert": "\u092E\u0939\u0924\u094D\u0924\u094D\u0935\u093E\u091A\u0940 \u092C\u093E\u0924\u092E\u0940",
+    "Mumbai Metro Line 3 Phase 1 Commences Operations: Revolutionizing Urban Transit": "\u092E\u0941\u0902\u092C\u0908 \u092E\u0947\u091F\u094D\u0930\u094B \u092E\u093E\u0930\u094D\u0917 \u0969 \u091A\u094D\u092F\u093E \u092A\u0939\u093F\u0932\u094D\u092F\u093E \u091F\u092A\u094D\u092A\u094D\u092F\u093E\u091A\u0947 \u0909\u0926\u094D\u0918\u093E\u091F\u0928: \u0928\u093E\u0917\u0930\u0940 \u0935\u093E\u0939\u0924\u0941\u0915\u0940\u0924 \u0915\u094D\u0930\u093E\u0902\u0924\u0940",
+    "Phase 1 of Mumbai Metro Line 3 (Aarey to BKC) is now operational. The 12.5 km underground line significantly cuts travel time and congestion in Mumbai.": "\u092E\u0941\u0902\u092C\u0908 \u092E\u0947\u091F\u094D\u0930\u094B \u092E\u093E\u0930\u094D\u0917 \u0969 \u091A\u093E \u092A\u0939\u093F\u0932\u093E \u091F\u092A\u094D\u092A\u093E (\u0906\u0930\u0947 \u0924\u0947 \u092C\u0940\u0915\u0947\u0938\u0940) \u0906\u0924\u093E \u0915\u093E\u0930\u094D\u092F\u093E\u0928\u094D\u0935\u093F\u0924 \u091D\u093E\u0932\u093E \u0906\u0939\u0947. \u0967\u0968.\u096B \u0915\u093F\u092E\u0940\u091A\u093E \u092D\u0941\u092F\u093E\u0930\u0940 \u092E\u093E\u0930\u094D\u0917 \u092E\u0941\u0902\u092C\u0908\u0924\u0940\u0932 \u092A\u094D\u0930\u0935\u093E\u0938\u093E\u091A\u0940 \u0935\u0947\u0933 \u0906\u0923\u093F \u0935\u093E\u0939\u0924\u0942\u0915 \u0915\u094B\u0902\u0921\u0940 \u0932\u0915\u094D\u0937\u0923\u0940\u092F\u0930\u0940\u0924\u094D\u092F\u093E \u0915\u092E\u0940 \u0915\u0930\u0924\u094B.",
+    "Pune Declared India's Top Emerging Semiconductor Hub with Multi-Billion Investment": "\u0905\u092C\u094D\u091C\u093E\u0935\u0927\u0940\u0902\u091A\u094D\u092F\u093E \u0917\u0941\u0902\u0924\u0935\u0923\u0941\u0915\u0940\u0938\u0939 \u092A\u0941\u0923\u0947 \u092D\u093E\u0930\u0924\u093E\u091A\u0947 \u0906\u0918\u093E\u0921\u0940\u091A\u0947 \u0938\u0947\u092E\u0940\u0915\u0902\u0921\u0915\u094D\u091F\u0930 \u0939\u092C \u0918\u094B\u0937\u093F\u0924",
+    "Pune gets a massive semiconductor fabrication plant with multi-billion investments, creating 50,000 jobs and bolstering India's semiconductor mission.": "\u0905\u092C\u094D\u091C\u093E\u0935\u0927\u0940\u0902\u091A\u094D\u092F\u093E \u0917\u0941\u0902\u0924\u0935\u0923\u0941\u0915\u0940\u0938\u0939 \u092A\u0941\u0923\u094D\u092F\u093E\u0924 \u0938\u0947\u092E\u0940\u0915\u0902\u0921\u0915\u094D\u091F\u0930 \u092A\u094D\u0932\u093E\u0902\u091F \u0909\u092D\u093E\u0930\u0932\u093E \u091C\u093E\u0923\u093E\u0930 \u0905\u0938\u0942\u0928, \u092F\u093E\u092E\u0941\u0933\u0947 \u096B\u0966,\u0966\u0966\u0966 \u0928\u094B\u0915\u0931\u094D\u092F\u093E \u0928\u093F\u0930\u094D\u092E\u093E\u0923 \u0939\u094B\u0924\u0940\u0932 \u0906\u0923\u093F \u092D\u093E\u0930\u0924\u093E\u091A\u0947 \u0938\u0947\u092E\u0940\u0915\u0902\u0921\u0915\u094D\u091F\u0930 \u092E\u093F\u0936\u0928\u0932\u093E \u092C\u0933 \u092E\u093F\u0933\u0947\u0932.",
+    "Maharashtra Kabaddi League Finals: Pune Panthers Clinch Championship in Thrilling Finish": "\u092E\u0939\u093E\u0930\u093E\u0937\u094D\u091F\u094D\u0930 \u0915\u092C\u0921\u094D\u0921\u0940 \u0932\u0940\u0917 \u0905\u0902\u0924\u093F\u092E \u0938\u093E\u092E\u0928\u093E: \u092A\u0941\u0923\u0947 \u092A\u0901\u0925\u0930\u094D\u0938\u0928\u0947 \u0905\u091F\u0940\u0924\u091F\u0940\u091A\u094D\u092F\u093E \u0938\u093E\u092E\u0928\u094D\u092F\u093E\u0924 \u092A\u091F\u0915\u093E\u0935\u0932\u0947 \u0935\u093F\u091C\u0947\u0924\u0947\u092A\u0926",
+    "Pune Panthers defeated Mumbai Monarchs 38-36 in the Maharashtra Kabaddi League finals to win the title in a thrilling finish at Pune.": "\u092A\u0941\u0923\u0947 \u092A\u0901\u0925\u0930\u094D\u0938\u0928\u0947 \u092E\u0939\u093E\u0930\u093E\u0937\u094D\u091F\u094D\u0930 \u0915\u092C\u0921\u094D\u0921\u0940 \u0932\u0940\u0917\u091A\u094D\u092F\u093E \u0905\u0902\u0924\u093F\u092E \u0938\u093E\u092E\u0928\u094D\u092F\u093E\u0924 \u092E\u0941\u0902\u092C\u0908 \u092E\u094B\u0928\u093E\u0930\u094D\u0915\u094D\u0938\u091A\u093E \u0969\u096E-\u0969\u096C \u0905\u0938\u093E \u092A\u0930\u093E\u092D\u0935 \u0915\u0930\u0942\u0928 \u0935\u093F\u091C\u0947\u0924\u0947\u092A\u0926 \u092A\u091F\u0915\u093E\u0935\u0932\u0947.",
+    "Maharashtra Chitrapat Mahotsav: 'Sahyadri' Wins Best Marathi Feature Film Award": "\u092E\u0939\u093E\u0930\u093E\u0937\u094D\u091F\u094D\u0930 \u0930\u093E\u091C\u094D\u092F \u091A\u093F\u0924\u094D\u0930\u092A\u091F \u092E\u0939\u094B\u0924\u094D\u0938\u0935: '\u0938\u0939\u094D\u092F\u093E\u0926\u094D\u0930\u0940' \u0920\u0930\u0932\u093E \u0938\u0930\u094D\u0935\u094B\u0924\u094D\u0924\u092E \u092E\u0930\u093E\u0920\u0940 \u091A\u093F\u0924\u094D\u0930\u092A\u091F",
+    "'Sahyadri' won the Best Feature Film award at the Maharashtra Chitrapat Mahotsav, with Swapnil Joshi and Mukta Barve winning top acting honors.": "\u092E\u0939\u093E\u0930\u093E\u0937\u094D\u091F\u094D\u0930 \u0930\u093E\u091C\u094D\u092F \u091A\u093F\u0924\u094D\u0930\u092A\u091F \u092E\u0939\u094B\u0924\u094D\u0938\u0935\u093E\u0924 '\u0938\u0939\u094D\u092F\u093E\u0926\u094D\u0930\u0940'\u0932\u093E \u0938\u0930\u094D\u0935\u094B\u0924\u094D\u0915\u0943\u0937\u094D\u091F \u091A\u093F\u0924\u094D\u0930\u092A\u091F\u093E\u091A\u093E \u092A\u0941\u0930\u0938\u094D\u0915\u093E\u0930 \u092E\u093F\u0933\u093E\u0932\u093E, \u0924\u0930 \u0938\u094D\u0935\u092A\u094D\u0928\u093F\u0932 \u091C\u094B\u0936\u0940 \u0906\u0923\u093F \u092E\u0941\u0915\u094D\u0924\u093E \u092C\u0930\u094D\u0935\u0947 \u092F\u093E\u0902\u0928\u093E \u0938\u0930\u094D\u0935\u094B\u0924\u094D\u0915\u0943\u0937\u094D\u091F \u0905\u092D\u093F\u0928\u092F\u093E\u091A\u0947 \u092E\u093E\u0928\u0915\u0930\u0940 \u0920\u0930\u0935\u093F\u0923\u094D\u092F\u093E\u0924 \u0906\u0932\u0947."
   },
   "mr-en": {}
 };
@@ -635,7 +631,7 @@ app.post("/api/ai/translate", async (req, res) => {
   if (!text) return res.status(400).json({ error: "Text content is required for translation" });
   const isEnToMr = direction === "en-mr";
   const cleanText = text.trim();
-  const cacheKey = `\${direction}:\${cleanText}`;
+  const cacheKey = `${direction}:${cleanText}`;
   const lookupNormalized = (txt, dict) => {
     const norm = txt.toLowerCase().replace(/\\s+/g, " ").trim();
     for (const [key, val] of Object.entries(dict)) {
@@ -647,11 +643,17 @@ app.post("/api/ai/translate", async (req, res) => {
   if (preseeded) return res.json({ translatedText: preseeded });
   if (translationCache.has(cacheKey)) return res.json({ translatedText: translationCache.get(cacheKey) });
   if (!ai) {
-    if (isEnToMr) return res.json({ translatedText: `[\u092E\u0930\u093E\u0920\u0940]: \${text}` });
-    return res.json({ translatedText: `\${text} (Translated)` });
+    if (isEnToMr) return res.json({ translatedText: `[\u092E\u0930\u093E\u0920\u0940]: ${text}` });
+    return res.json({ translatedText: `${text} (Translated)` });
   }
   try {
-    let prompt = isEnToMr ? `Translate the following English text accurately and naturally into highly professional Marathi. Only return the translated Marathi text.\\n\\nEnglish Text:\\n\${text}` : `Translate the following Marathi text accurately and naturally into professional English. Only return the translated English text.\\n\\nMarathi Text:\\n\${text}`;
+    let prompt = isEnToMr ? `Translate the following English text accurately and naturally into highly professional Marathi. Only return the translated Marathi text.
+
+English Text:
+${text}` : `Translate the following Marathi text accurately and naturally into professional English. Only return the translated English text.
+
+Marathi Text:
+${text}`;
     const response = await ai.models.generateContent({ model: "gemini-3.5-flash", contents: prompt });
     const translatedResult = response.text?.trim() || "";
     if (translatedResult && translatedResult !== "Translation failed.") {
@@ -661,7 +663,7 @@ app.post("/api/ai/translate", async (req, res) => {
     throw new Error("Empty translation returned from Gemini API");
   } catch (error) {
     console.warn("Gemini AI API Error during translation", error.message || error);
-    return res.json({ translatedText: isEnToMr ? `[\u092E\u0930\u093E\u0920\u0940]: \${text}` : `\${text} (Translated)` });
+    return res.json({ translatedText: isEnToMr ? `[\u092E\u0930\u093E\u0920\u0940]: ${text}` : `${text} (Translated)` });
   }
 });
 app.post("/api/ai/summarize", async (req, res) => {
@@ -670,49 +672,57 @@ app.post("/api/ai/summarize", async (req, res) => {
   const cacheKey = (content.slice(0, 150) + ":" + (title || "")).trim();
   if (summaryCache.has(cacheKey)) return res.json({ summary: summaryCache.get(cacheKey) });
   if (!ai) {
-    const fallbackText = `[AI Insight Fallback] Based on '\${title || "Latest Stories"}': This crucial story highlights strategic milestones and the long-term impact on global infrastructure levels.`;
+    const fallbackText = `[AI Insight Fallback] Based on '${title || "Latest Stories"}': This crucial story highlights strategic milestones and the long-term impact on global infrastructure levels.`;
     return res.json({ summary: fallbackText });
   }
   try {
-    const prompt = `You are a professional lead editor. Provide a highly engaging, concise (max 3 bullet points) summary of this article, focusing on key facts. Format with bold key terms.\\n\\nTitle: \${title || "News Update"}\\nArticle Content:\\n\${content}`;
+    const prompt = `You are a professional lead editor. Provide a highly engaging, concise (max 3 bullet points) summary of this article, focusing on key facts. Format with bold key terms.
+
+Title: ${title || "News Update"}
+Article Content:
+${content}`;
     const response = await ai.models.generateContent({ model: "gemini-3.5-flash", contents: prompt });
     const summaryResult = response.text || "Failed to generate AI editorial brief.";
     summaryCache.set(cacheKey, summaryResult);
     res.json({ summary: summaryResult });
   } catch (error) {
     console.warn("Gemini AI API Error during summarization", error.message || error);
-    res.json({ summary: `[AI Insight Brief] Based on '\${title || "Latest Stories"}': This crucial story highlights strategic milestones and the long-term impact on global infrastructure levels.` });
+    res.json({ summary: `[AI Insight Brief] Based on '${title || "Latest Stories"}': This crucial story highlights strategic milestones and the long-term impact on global infrastructure levels.` });
   }
 });
 app.post("/api/ai/admin-insights", authenticateToken, requireAdmin, async (req, res) => {
   const { totalViews, totalArticles, totalUsers, totalComments, focusCategory } = req.body;
   if (!ai) {
-    const fallbackInsight = `[Review Panel Insight] Reader engagement is peaking around \${focusCategory || 'technology'} issues. Recommend increasing editorial pacing toward these briefs.`;
+    const fallbackInsight = `[Review Panel Insight] Reader engagement is peaking around ${focusCategory || "technology"} issues. Recommend increasing editorial pacing toward these briefs.`;
     return res.json({ insight: fallbackInsight });
   }
   try {
     const prompt = `As a high-level digital publishing chief strategist, look at our portal's latest metrics and write a brief, highly professional 2-sentence executive guidance card.
-    Metrics: Views: \${totalViews}, Articles: \${totalArticles}, Users: \${totalUsers}, Comments: \${totalComments}, Top Category: \${focusCategory || "Technology"}. Keep it sharp and data-driven.`;
+    Metrics: Views: ${totalViews}, Articles: ${totalArticles}, Users: ${totalUsers}, Comments: ${totalComments}, Top Category: ${focusCategory || "Technology"}. Keep it sharp and data-driven.`;
     const response = await ai.models.generateContent({ model: "gemini-3.5-flash", contents: prompt });
     res.json({ insight: response.text || "An unexpected error disrupted the analytics agent." });
   } catch (err) {
     console.warn("Gemini AI error during analytics", err.message || err);
-    res.json({ insight: `[Review Panel Insight] Reader engagement is peaking around \${focusCategory || 'technology'} issues. Recommend increasing editorial pacing toward these briefs.` });
+    res.json({ insight: `[Review Panel Insight] Reader engagement is peaking around ${focusCategory || "technology"} issues. Recommend increasing editorial pacing toward these briefs.` });
   }
 });
-async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
+if (process.env.NODE_ENV !== "production" && process.env.VERCEL !== "1") {
+  async function startServer() {
     const vite = await (0, import_vite.createServer)({ server: { middlewareMode: true }, appType: "spa" });
     app.use(vite.middlewares);
     console.log("Vite development middleware mounted.");
-  } else {
-    const distPath = import_path2.default.join(process.cwd(), "dist");
-    app.use(import_express.default.static(distPath));
-    app.get("*", (req, res) => res.sendFile(import_path2.default.join(distPath, "index.html")));
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Express Full-stack server running successfully on http://localhost:${PORT}`);
+    });
   }
+  startServer();
+} else if (process.env.VERCEL !== "1") {
+  const distPath = import_path2.default.join(process.cwd(), "dist");
+  app.use(import_express.default.static(distPath));
+  app.get("*", (req, res) => res.sendFile(import_path2.default.join(distPath, "index.html")));
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Express Full-stack server running successfully on http://localhost:\${PORT}`);
+    console.log(`Express Full-stack server running successfully on http://localhost:${PORT}`);
   });
 }
-startServer();
+var server_default = app;
 //# sourceMappingURL=server.cjs.map

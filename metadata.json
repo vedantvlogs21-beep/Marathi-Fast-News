@@ -1,0 +1,6 @@
+{
+  "name": "मराठी फास्ट न्यूज Portal & Admin Console",
+  "description": "A high-performance interactive news platform featuring real-time stream feeds, personalized news recommendations, an admin CMS & user management system, robust article search and filtration, commenting, social sharing, English-to-Marathi & Marathi-to-English translation capabilities, and server-side Gemini AI content summarization.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

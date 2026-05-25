@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 import { Article, Comment, User, SystemNotification, AnalyticsSummary } from "./src/types";
-import db from "./database";
+import db from "./database.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
@@ -12,7 +12,7 @@ dotenv.config();
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_for_local_dev_12345";
 

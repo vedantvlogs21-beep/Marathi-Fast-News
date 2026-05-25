@@ -41,13 +41,13 @@ if (process.env.GEMINI_API_KEY) {
 }
 
 // Authentication Middleware
-const authenticateToken = (req: any, res: any, next: any) => {
+const authenticateToken = async (req: any, res: any, next: any) => {
   // Authentication disabled: inject a dummy admin profile for structural consistency
   req.user = { id: 'admin-override', username: 'system_admin', role: 'admin' };
   next();
 };
 
-const requireAdmin = (req: any, res: any, next: any) => {
+const requireAdmin = async (req: any, res: any, next: any) => {
   // Admin requirement bypassed globally per user request
   next();
 };
@@ -56,7 +56,7 @@ const requireAdmin = (req: any, res: any, next: any) => {
 // Server-Sent Events (SSE) Stream
 // ==========================================
 
-app.get("/api/stream", (req, res) => {
+app.get("/api/stream", (req: any, res: any) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -73,9 +73,9 @@ app.get("/api/stream", (req, res) => {
 // User Profile APIs (Auth removed)
 // ==========================================
 
-app.get("/api/user/profile/:id", (req, res) => {
+app.get("/api/users/:id", authenticateToken, async (req: any, res: any) => {
   const { id } = req.params;
-  const userRow = db.prepare('SELECT * FROM users WHERE id = ?').get(id) as any;
+  const userRow = await db.prepare('SELECT * FROM users WHERE id = ?').get(id) as any;
   if (!userRow) {
     return res.status(404).json({ error: "User not found" });
   }
@@ -92,7 +92,7 @@ app.get("/api/user/profile/:id", (req, res) => {
   res.json(userObj);
 });
 
-app.put("/api/user/profile/:id", authenticateToken, (req, res) => {
+app.put("/api/users/:id", authenticateToken, async (req: any, res: any) => {
   const { id } = req.params;
   
   // Ensure users only update their own profile unless admin
@@ -102,14 +102,14 @@ app.put("/api/user/profile/:id", authenticateToken, (req, res) => {
 
   const { interests, notificationsEnabled, savedArticles } = req.body;
   
-  const userRow = db.prepare('SELECT * FROM users WHERE id = ?').get(id) as any;
+  const userRow = await db.prepare('SELECT * FROM users WHERE id = ?').get(id) as any;
   if (!userRow) return res.status(404).json({ error: "User not found" });
 
   if (interests !== undefined) userRow.interests = JSON.stringify(interests);
   if (notificationsEnabled !== undefined) userRow.notificationsEnabled = notificationsEnabled ? 1 : 0;
   if (savedArticles !== undefined) userRow.savedArticles = JSON.stringify(savedArticles);
 
-  db.prepare(`
+  await db.prepare(`
     UPDATE users 
     SET interests = @interests, notificationsEnabled = @notificationsEnabled, savedArticles = @savedArticles
     WHERE id = @id
@@ -130,10 +130,10 @@ app.put("/api/user/profile/:id", authenticateToken, (req, res) => {
 // Articles & Feed APIs
 // ==========================================
 
-app.get("/api/articles", (req, res) => {
+app.get("/api/articles", async (req: any, res: any) => {
   const { search, category, sortBy, userId } = req.query;
   
-  let articles = db.prepare('SELECT * FROM articles').all() as any[];
+  let articles = await db.prepare('SELECT * FROM articles').all() as any[];
   
   // parse booleans
   articles = articles.map(art => ({ ...art, isBreaking: Boolean(art.isBreaking) }));
@@ -156,7 +156,7 @@ app.get("/api/articles", (req, res) => {
 
   // 3. User personalized feeds sorting sequence
   if (userId && typeof userId === "string") {
-    const userRow = db.prepare('SELECT interests FROM users WHERE id = ?').get(userId) as any;
+    const userRow = await db.prepare('SELECT interests FROM users WHERE id = ?').get(userId) as any;
     if (userRow && userRow.interests) {
       const interests = JSON.parse(userRow.interests);
       if (interests.length > 0) {
@@ -183,17 +183,17 @@ app.get("/api/articles", (req, res) => {
   res.json(articles);
 });
 
-app.get("/api/articles/:id", (req, res) => {
+app.get("/api/articles/:id", async (req: any, res: any) => {
   const { id } = req.params;
-  const article = db.prepare('SELECT * FROM articles WHERE id = ?').get(id) as any;
+  const article = await db.prepare('SELECT * FROM articles WHERE id = ?').get(id) as any;
   if (!article) {
     return res.status(404).json({ error: "Article not found" });
   }
 
-  db.prepare('UPDATE articles SET views = views + 1 WHERE id = ?').run(id);
+  await db.prepare('UPDATE articles SET views = views + 1 WHERE id = ?').run(id);
   
   const today = new Date().toISOString().split('T')[0];
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO daily_traffic (date, views) VALUES (?, 1)
     ON CONFLICT(date) DO UPDATE SET views = views + 1
   `).run(today);
@@ -204,13 +204,13 @@ app.get("/api/articles/:id", (req, res) => {
   res.json(article);
 });
 
-app.post("/api/articles/:id/like", authenticateToken, (req, res) => {
+app.post("/api/articles/:id/like", authenticateToken, async (req: any, res: any) => {
   const { id } = req.params;
-  const info = db.prepare('UPDATE articles SET likes = likes + 1 WHERE id = ?').run(id);
+  const info = await db.prepare('UPDATE articles SET likes = likes + 1 WHERE id = ?').run(id);
   if (info.changes === 0) {
     return res.status(404).json({ error: "Article not found" });
   }
-  const article = db.prepare('SELECT likes FROM articles WHERE id = ?').get(id) as any;
+  const article = await db.prepare('SELECT likes FROM articles WHERE id = ?').get(id) as any;
   res.json({ likes: article.likes });
 });
 
@@ -218,13 +218,13 @@ app.post("/api/articles/:id/like", authenticateToken, (req, res) => {
 // Commenting System APIs
 // ==========================================
 
-app.get("/api/articles/:id/comments", (req, res) => {
+app.get("/api/articles/:id/comments", async (req: any, res: any) => {
   const { id } = req.params;
-  const comments = db.prepare('SELECT * FROM comments WHERE articleId = ? ORDER BY timestamp DESC').all();
+  const comments = await db.prepare('SELECT * FROM comments WHERE articleId = ? ORDER BY timestamp DESC').all();
   res.json(comments);
 });
 
-app.post("/api/articles/:id/comments", authenticateToken, (req, res) => {
+app.post("/api/articles/:id/comments", authenticateToken, async (req: any, res: any) => {
   const { id } = req.params;
   // Fallback to JWT payload if not explicitly sent in body (safer)
   const userId = (req as any).user.id;
@@ -235,7 +235,7 @@ app.post("/api/articles/:id/comments", authenticateToken, (req, res) => {
     return res.status(400).json({ error: "Missing required comment payload properties" });
   }
 
-  const article = db.prepare('SELECT id FROM articles WHERE id = ?').get(id);
+  const article = await db.prepare('SELECT id FROM articles WHERE id = ?').get(id);
   if (!article) return res.status(404).json({ error: "Article not found" });
 
   const newComment = {
@@ -248,12 +248,12 @@ app.post("/api/articles/:id/comments", authenticateToken, (req, res) => {
     sentiment: 'neutral'
   };
 
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO comments (id, articleId, userId, username, content, timestamp, sentiment)
     VALUES (@id, @articleId, @userId, @username, @content, @timestamp, @sentiment)
   `).run(newComment);
 
-  db.prepare('UPDATE articles SET commentsCount = commentsCount + 1 WHERE id = ?').run(id);
+  await db.prepare('UPDATE articles SET commentsCount = commentsCount + 1 WHERE id = ?').run(id);
 
   // Non-blocking AI Sentiment Analysis
   if (ai) {
@@ -263,7 +263,7 @@ app.post("/api/articles/:id/comments", authenticateToken, (req, res) => {
         const response = await ai.models.generateContent({ model: "gemini-3.5-flash", contents: prompt });
         let sentimentRaw = response.text?.trim().toLowerCase() || 'neutral';
         if (!['positive', 'neutral', 'negative'].includes(sentimentRaw)) sentimentRaw = 'neutral';
-        db.prepare('UPDATE comments SET sentiment = ? WHERE id = ?').run(sentimentRaw, newComment.id);
+        await db.prepare('UPDATE comments SET sentiment = ? WHERE id = ?').run(sentimentRaw, newComment.id);
       } catch (err) {
         console.warn("Sentiment Analysis AI Error:", err);
       }
@@ -277,19 +277,19 @@ app.post("/api/articles/:id/comments", authenticateToken, (req, res) => {
 // Notification Center APIs
 // ==========================================
 
-app.get("/api/notifications", (req, res) => {
-  const notifications = db.prepare('SELECT * FROM notifications ORDER BY timestamp DESC').all();
+app.get("/api/notifications", async (req: any, res: any) => {
+  const notifications = await db.prepare('SELECT * FROM notifications ORDER BY timestamp DESC').all();
   res.json(notifications);
 });
 
-app.post("/api/notifications/trigger-breaking", authenticateToken, requireAdmin, (req, res) => {
+app.post("/api/notifications/trigger-breaking", authenticateToken, requireAdmin, async (req, res) => {
   const { articleId, title, message } = req.body;
   if (!title || !message) {
     return res.status(400).json({ error: "Title and message are required" });
   }
 
   if (articleId) {
-    db.prepare('UPDATE articles SET isBreaking = 1 WHERE id = ?').run(articleId);
+    await db.prepare('UPDATE articles SET isBreaking = 1 WHERE id = ?').run(articleId);
   }
 
   const newNotification = {
@@ -301,7 +301,7 @@ app.post("/api/notifications/trigger-breaking", authenticateToken, requireAdmin,
     timestamp: new Date().toISOString()
   };
 
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO notifications (id, type, title, message, articleId, timestamp)
     VALUES (@id, @type, @title, @message, @articleId, @timestamp)
   `).run(newNotification);
@@ -375,7 +375,7 @@ app.post("/api/upload", authenticateToken, requireAdmin, async (req, res) => {
 // Content Management System (CMS) & Admin Core
 // ==========================================
 
-app.post("/api/articles", authenticateToken, requireAdmin, (req, res) => {
+app.post("/api/articles", authenticateToken, requireAdmin, async (req, res) => {
   const { title, content, category, source, imageUrl, author, isBreaking, videoUrl, location, mediaType } = req.body;
   if (!title || !content || !category || !source || !author) {
     return res.status(400).json({ error: "Missing required CMS setup fields" });
@@ -400,13 +400,13 @@ app.post("/api/articles", authenticateToken, requireAdmin, (req, res) => {
     commentsCount: 0
   };
 
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO articles (id, title, content, summary, category, source, imageUrl, publishedAt, author, views, likes, isBreaking, videoUrl, commentsCount, location, mediaType)
     VALUES (@id, @title, @content, @summary, @category, @source, @imageUrl, @publishedAt, @author, @views, @likes, @isBreaking, @videoUrl, @commentsCount, @location, @mediaType)
   `).run(newArticle);
 
   if (newArticle.isBreaking) {
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO notifications (id, type, title, message, articleId, timestamp)
       VALUES (?, 'breaking', 'BREAKING NEWS ALERT', ?, ?, ?)
     `).run("notif-auto-" + Date.now(), `\${newArticle.title} - reported by \${newArticle.source}`, newArticle.id, new Date().toISOString());
@@ -416,11 +416,11 @@ app.post("/api/articles", authenticateToken, requireAdmin, (req, res) => {
   res.status(201).json({ ...newArticle, isBreaking: Boolean(newArticle.isBreaking) });
 });
 
-app.put("/api/articles/:id", authenticateToken, requireAdmin, (req, res) => {
+app.put("/api/articles/:id", authenticateToken, requireAdmin, async (req, res) => {
   const { id } = req.params;
   const { title, content, summary, category, source, imageUrl, author, isBreaking, videoUrl, location, mediaType } = req.body;
   
-  const info = db.prepare(`
+  const info = await db.prepare(`
     UPDATE articles SET 
       title = COALESCE(?, title),
       content = COALESCE(?, content),
@@ -441,23 +441,23 @@ app.put("/api/articles/:id", authenticateToken, requireAdmin, (req, res) => {
   );
 
   if (info.changes === 0) return res.status(404).json({ error: "Article not found" });
-  const article = db.prepare('SELECT * FROM articles WHERE id = ?').get(id) as any;
+  const article = await db.prepare('SELECT * FROM articles WHERE id = ?').get(id) as any;
   article.isBreaking = Boolean(article.isBreaking);
   broadcastSSE('refresh_content');
   res.json({ message: "Article updated successfully", article });
 });
 
-app.delete("/api/articles/:id", authenticateToken, requireAdmin, (req, res) => {
+app.delete("/api/articles/:id", authenticateToken, requireAdmin, async (req, res) => {
   const { id } = req.params;
-  const info = db.prepare('DELETE FROM articles WHERE id = ?').run(id);
+  const info = await db.prepare('DELETE FROM articles WHERE id = ?').run(id);
   if (info.changes === 0) return res.status(404).json({ error: "Article not found" });
   broadcastSSE('refresh_content');
   res.json({ message: "Article archived and deleted successfully" });
 });
 
 // Admin User Accounts Control
-app.get("/api/admin/users", authenticateToken, requireAdmin, (req, res) => {
-  const users = db.prepare('SELECT id, username, email, role, interests, savedArticles, notificationsEnabled, registeredAt FROM users').all() as any[];
+app.get("/api/admin/users", authenticateToken, requireAdmin, async (req, res) => {
+  const users = await db.prepare('SELECT id, username, email, role, interests, savedArticles, notificationsEnabled, registeredAt FROM users').all() as any[];
   users.forEach(u => {
     u.interests = JSON.parse(u.interests);
     u.savedArticles = JSON.parse(u.savedArticles);
@@ -466,24 +466,24 @@ app.get("/api/admin/users", authenticateToken, requireAdmin, (req, res) => {
   res.json(users);
 });
 
-app.put("/api/admin/users/:id/role", authenticateToken, requireAdmin, (req, res) => {
+app.put("/api/admin/users/:id/role", authenticateToken, requireAdmin, async (req, res) => {
   const { id } = req.params;
   const { role } = req.body;
-  const info = db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id);
+  const info = await db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id);
   if (info.changes === 0) return res.status(404).json({ error: "User profile not found" });
   res.json({ message: "User privileges successfully altered" });
 });
 
-app.delete("/api/admin/users/:id", authenticateToken, requireAdmin, (req, res) => {
+app.delete("/api/admin/users/:id", authenticateToken, requireAdmin, async (req, res) => {
   const { id } = req.params;
-  const info = db.prepare('DELETE FROM users WHERE id = ?').run(id);
+  const info = await db.prepare('DELETE FROM users WHERE id = ?').run(id);
   if (info.changes === 0) return res.status(404).json({ error: "User not found" });
   res.json({ message: "User account suspended successfully" });
 });
 
 // Comment Moderation APIs
-app.get("/api/admin/comments", authenticateToken, requireAdmin, (req, res) => {
-  const comments = db.prepare(`
+app.get("/api/admin/comments", authenticateToken, requireAdmin, async (req, res) => {
+  const comments = await db.prepare(`
     SELECT c.*, a.title as articleTitle, a.category as articleCategory 
     FROM comments c
     LEFT JOIN articles a ON c.articleId = a.id
@@ -492,35 +492,35 @@ app.get("/api/admin/comments", authenticateToken, requireAdmin, (req, res) => {
   res.json(comments);
 });
 
-app.delete("/api/admin/comments/:id", authenticateToken, requireAdmin, (req, res) => {
+app.delete("/api/admin/comments/:id", authenticateToken, requireAdmin, async (req, res) => {
   const { id } = req.params;
-  const comment = db.prepare('SELECT articleId FROM comments WHERE id = ?').get(id) as any;
+  const comment = await db.prepare('SELECT articleId FROM comments WHERE id = ?').get(id) as any;
   if (!comment) return res.status(404).json({ error: "Comment not found" });
 
-  db.prepare('DELETE FROM comments WHERE id = ?').run(id);
-  db.prepare('UPDATE articles SET commentsCount = MAX(0, commentsCount - 1) WHERE id = ?').run(comment.articleId);
+  await db.prepare('DELETE FROM comments WHERE id = ?').run(id);
+  await db.prepare('UPDATE articles SET commentsCount = MAX(0, commentsCount - 1) WHERE id = ?').run(comment.articleId);
 
   res.json({ message: "Comment removed successfully" });
 });
 
 // Analytics Reporting
-app.get("/api/admin/analytics", authenticateToken, requireAdmin, (req, res) => {
-  const totalViewsObj = db.prepare('SELECT SUM(views) as t FROM articles').get() as any;
+app.get("/api/admin/analytics", authenticateToken, requireAdmin, async (req, res) => {
+  const totalViewsObj = await db.prepare('SELECT SUM(views) as t FROM articles').get() as any;
   const totalViews = totalViewsObj?.t || 0;
-  const totalArticlesObj = db.prepare('SELECT COUNT(*) as t FROM articles').get() as any;
+  const totalArticlesObj = await db.prepare('SELECT COUNT(*) as t FROM articles').get() as any;
   const totalArticles = totalArticlesObj?.t || 0;
-  const totalUsersObj = db.prepare('SELECT COUNT(*) as t FROM users').get() as any;
+  const totalUsersObj = await db.prepare('SELECT COUNT(*) as t FROM users').get() as any;
   const totalUsers = totalUsersObj?.t || 0;
-  const totalCommentsObj = db.prepare('SELECT COUNT(*) as t FROM comments').get() as any;
+  const totalCommentsObj = await db.prepare('SELECT COUNT(*) as t FROM comments').get() as any;
   const totalComments = totalCommentsObj?.t || 0;
 
   const categories = ["Politics", "Technology", "Business", "Sports", "Science", "Entertainment"];
-  const categoryStats = categories.map(cat => {
-    const stats = db.prepare('SELECT COUNT(*) as c, SUM(views) as v FROM articles WHERE LOWER(category) = LOWER(?)').get(cat) as any;
+  const categoryStats = await Promise.all(categories.map(async cat => {
+    const stats = await db.prepare('SELECT COUNT(*) as c, SUM(views) as v FROM articles WHERE LOWER(category) = LOWER(?)').get(cat) as any;
     return { category: cat, count: stats?.c || 0, views: stats?.v || 0 };
-  });
+  }));
 
-  const dailyTrafficData = db.prepare('SELECT date, views FROM daily_traffic ORDER BY date DESC LIMIT 7').all() as any[];
+  const dailyTrafficData = await db.prepare('SELECT date, views FROM daily_traffic ORDER BY date DESC LIMIT 7').all() as any[];
   const today = new Date();
   const dailyViews = Array.from({length: 7}).map((_, i) => {
     const d = new Date(today);
@@ -531,7 +531,7 @@ app.get("/api/admin/analytics", authenticateToken, requireAdmin, (req, res) => {
     return { date: shortDate, views: row ? row.views : 0, articles: totalArticles }; 
   });
 
-  const sentiments = db.prepare('SELECT sentiment, COUNT(*) as count FROM comments GROUP BY sentiment').all() as any[];
+  const sentiments = await db.prepare('SELECT sentiment, COUNT(*) as count FROM comments GROUP BY sentiment').all() as any[];
   let pos = 0, neu = 0, neg = 0;
   let totalS = 0;
   sentiments.forEach(s => {
@@ -685,7 +685,7 @@ if (process.env.NODE_ENV !== "production" && process.env.VERCEL !== "1") {
 } else if (process.env.VERCEL !== "1") {
   const distPath = path.join(process.cwd(), "dist");
   app.use(express.static(distPath));
-  app.get("*", (req, res) => res.sendFile(path.join(distPath, "index.html")));
+    app.get("*", (req: any, res: any) => res.sendFile(path.join(distPath, "index.html")));
   
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Express Full-stack server running successfully on http://localhost:${PORT}`);

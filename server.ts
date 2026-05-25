@@ -220,7 +220,7 @@ app.post("/api/articles/:id/like", authenticateToken, async (req: any, res: any)
 
 app.get("/api/articles/:id/comments", async (req: any, res: any) => {
   const { id } = req.params;
-  const comments = await db.prepare('SELECT * FROM comments WHERE articleId = ? ORDER BY timestamp DESC').all();
+  const comments = await db.prepare('SELECT * FROM comments WHERE articleId = ? ORDER BY timestamp DESC').all(id);
   res.json(comments);
 });
 

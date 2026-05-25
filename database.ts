@@ -1,8 +1,10 @@
 import Database from 'better-sqlite3';
 import bcrypt from 'bcrypt';
 import path from 'path';
+import os from 'os';
 
-const dbPath = path.resolve('data.db');
+const isVercel = process.env.VERCEL || process.env.VERCEL_ENV || process.env.VERCEL_URL;
+const dbPath = isVercel ? '/tmp/data.db' : (process.env.DB_PATH || path.resolve('data.db'));
 const db = new Database(dbPath, { verbose: console.log });
 db.pragma('journal_mode = WAL');
 

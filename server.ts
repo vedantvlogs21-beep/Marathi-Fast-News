@@ -2,7 +2,6 @@ import express from "express";
 import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
-import { createServer as createViteServer } from "vite";
 import { Article, Comment, User, SystemNotification, AnalyticsSummary } from "./src/types";
 import db from "./database.js";
 import bcrypt from "bcrypt";
@@ -673,6 +672,7 @@ app.post("/api/ai/admin-insights", authenticateToken, requireAdmin, async (req, 
 
 if (process.env.NODE_ENV !== "production" && process.env.VERCEL !== "1") {
   async function startServer() {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
     app.use(vite.middlewares);
     console.log("Vite development middleware mounted.");

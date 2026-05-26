@@ -81,6 +81,26 @@ export default function App() {
 
   // Popup overlay configurations
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
+
+  // Synchronize selectedArticleId with URL '?story=ID' query param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const storyId = params.get('story');
+    if (storyId && !selectedArticleId) {
+      setSelectedArticleId(storyId);
+    }
+  }, [articles]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (selectedArticleId) {
+      url.searchParams.set('story', selectedArticleId);
+    } else {
+      url.searchParams.delete('story');
+    }
+    window.history.replaceState({}, '', url.pathname + url.search);
+  }, [selectedArticleId]);
+
   const [showNotifDrawer, setShowNotifDrawer] = useState(false);
 
   // General telemetry tracking

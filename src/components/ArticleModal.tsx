@@ -236,8 +236,8 @@ export default function ArticleModal({
   };
 
   const copyShareLink = () => {
-    // Generates share credentials
-    const dummyUrl = `${window.location.origin}/stories/${article?.id}`;
+    // Generates share credentials using query parameter for cross-platform fallback
+    const dummyUrl = `${window.location.origin}/?story=${article?.id}`;
     navigator.clipboard.writeText(dummyUrl).then(() => {
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2000);

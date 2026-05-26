@@ -144,7 +144,7 @@ export default function AdminPanel({
   ];
 
   return (
-    <div className="flex min-h-[calc(100vh-80px)] bg-slate-50 relative" id="admin-panel-console">
+    <div className="flex min-h-[calc(100vh-64px)] bg-slate-50 relative" id="admin-panel-console">
       
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
@@ -156,8 +156,8 @@ export default function AdminPanel({
 
       {/* Dark Sidebar */}
       <div className={`
-        fixed lg:sticky top-0 lg:top-0 h-full lg:h-[calc(100vh-80px)] 
-        w-64 bg-slate-950 text-slate-300 z-50 flex flex-col
+        fixed lg:sticky top-0 lg:top-16 left-0 h-full lg:h-[calc(100vh-64px)] 
+        w-64 bg-slate-950 text-slate-300 z-50 flex flex-col border-r border-white/5
         transition-transform duration-300 ease-in-out
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>

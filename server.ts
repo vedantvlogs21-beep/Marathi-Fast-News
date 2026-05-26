@@ -3,15 +3,18 @@ import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { Article, Comment, User, SystemNotification, AnalyticsSummary } from "./src/types";
-import db from "./database.js";
+import db, { initDb } from "./database.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
 dotenv.config();
 
+// Auto-initialize Turso database tables on startup
+initDb().catch(err => console.error("Database initialization failed:", err));
+
 const app = express();
 app.use(express.json({ limit: '50mb' }));
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_for_local_dev_12345";
 

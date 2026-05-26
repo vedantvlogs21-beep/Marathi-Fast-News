@@ -1,19 +1,26 @@
-import Database from 'better-sqlite3';
+import { createClient } from "@libsql/client";
 import bcrypt from 'bcrypt';
-import path from 'path';
-import os from 'os';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const isVercel = process.env.VERCEL || process.env.VERCEL_ENV || process.env.VERCEL_URL;
-const dbPath = isVercel ? '/tmp/data.db' : (process.env.DB_PATH || path.resolve('data.db'));
-const db = new Database(dbPath, { verbose: console.log });
-db.pragma('journal_mode = WAL');
+const url = process.env.TURSO_DATABASE_URL || "";
+const authToken = process.env.TURSO_AUTH_TOKEN || "";
+
+if (!url || !authToken) {
+  console.error("CRITICAL ERROR: TURSO_DATABASE_URL or TURSO_AUTH_TOKEN is missing!");
+}
+
+const db = createClient({
+  url,
+  authToken,
+});
 
 // ==========================================
 // Schema Setup
 // ==========================================
-const initDb = () => {
+export const initDb = async () => {
   // Users Table
-  db.exec(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       username TEXT NOT NULL,
@@ -28,7 +35,7 @@ const initDb = () => {
   `);
 
   // Articles Table
-  db.exec(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS articles (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
@@ -50,7 +57,7 @@ const initDb = () => {
   `);
 
   // Comments Table
-  db.exec(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS comments (
       id TEXT PRIMARY KEY,
       articleId TEXT NOT NULL,
@@ -64,20 +71,12 @@ const initDb = () => {
     );
   `);
 
-  try {
-    db.exec(`ALTER TABLE comments ADD COLUMN sentiment TEXT DEFAULT 'neutral';`);
-  } catch (e) {}
-
-  try {
-    db.exec(`ALTER TABLE articles ADD COLUMN location TEXT;`);
-  } catch (e) {}
-
-  try {
-    db.exec(`ALTER TABLE articles ADD COLUMN mediaType TEXT DEFAULT 'standard';`);
-  } catch (e) {}
+  try { await db.execute(`ALTER TABLE comments ADD COLUMN sentiment TEXT DEFAULT 'neutral';`); } catch (e) {}
+  try { await db.execute(`ALTER TABLE articles ADD COLUMN location TEXT;`); } catch (e) {}
+  try { await db.execute(`ALTER TABLE articles ADD COLUMN mediaType TEXT DEFAULT 'standard';`); } catch (e) {}
 
   // Daily Traffic Analytics Table
-  db.exec(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS daily_traffic (
       date TEXT PRIMARY KEY,
       views INTEGER NOT NULL DEFAULT 0,
@@ -87,7 +86,7 @@ const initDb = () => {
   `);
 
   // Notifications Table
-  db.exec(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS notifications (
       id TEXT PRIMARY KEY,
       type TEXT NOT NULL,
@@ -99,47 +98,73 @@ const initDb = () => {
   `);
 
   // Seed Data if tables are empty
-  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
-  if (userCount.count === 0) {
+  const userCount = await db.execute('SELECT COUNT(*) as count FROM users');
+  const count = Number(userCount.rows[0].count);
+  
+  if (count === 0) {
     console.log("Database is empty. Seeding initial data...");
-    
-    // Create initial admin user
-    const insertUser = db.prepare(`
-      INSERT INTO users (id, username, email, password_hash, role, interests, savedArticles, notificationsEnabled, registeredAt)
-      VALUES (@id, @username, @email, @password_hash, @role, @interests, @savedArticles, @notificationsEnabled, @registeredAt)
-    `);
     
     const defaultPassword = 'password123';
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(defaultPassword, salt);
 
-    insertUser.run({
-      id: 'user-1',
-      username: 'admin_editor',
-      email: 'editor@marathifastnews.com',
-      password_hash: hash,
-      role: 'admin',
-      interests: JSON.stringify(["Technology", "Science", "Business"]),
-      savedArticles: JSON.stringify(["art-1", "art-3"]),
-      notificationsEnabled: 1,
-      registeredAt: "2026-01-15T08:00:00Z"
+    await db.execute({
+      sql: `INSERT INTO users (id, username, email, password_hash, role, interests, savedArticles, notificationsEnabled, registeredAt)
+      VALUES (@id, @username, @email, @password_hash, @role, @interests, @savedArticles, @notificationsEnabled, @registeredAt)`,
+      args: {
+        id: 'user-1',
+        username: 'admin_editor',
+        email: 'editor@marathifastnews.com',
+        password_hash: hash,
+        role: 'admin',
+        interests: JSON.stringify(["Technology", "Science", "Business"]),
+        savedArticles: JSON.stringify(["art-1", "art-3"]),
+        notificationsEnabled: 1,
+        registeredAt: "2026-01-15T08:00:00Z"
+      }
     });
 
-    insertUser.run({
-      id: 'user-2',
-      username: 'alex_reader',
-      email: 'alex@example.com',
-      password_hash: hash, // Same default password for testing
-      role: 'user',
-      interests: JSON.stringify(["Politics", "Sports", "Entertainment"]),
-      savedArticles: JSON.stringify(["art-2"]),
-      notificationsEnabled: 1,
-      registeredAt: "2026-03-10T12:30:00Z"
+    await db.execute({
+      sql: `INSERT INTO users (id, username, email, password_hash, role, interests, savedArticles, notificationsEnabled, registeredAt)
+      VALUES (@id, @username, @email, @password_hash, @role, @interests, @savedArticles, @notificationsEnabled, @registeredAt)`,
+      args: {
+        id: 'user-2',
+        username: 'alex_reader',
+        email: 'alex@example.com',
+        password_hash: hash,
+        role: 'user',
+        interests: JSON.stringify(["Politics", "Sports", "Entertainment"]),
+        savedArticles: JSON.stringify(["art-2"]),
+        notificationsEnabled: 1,
+        registeredAt: "2026-03-10T12:30:00Z"
+      }
     });
-
   }
 };
 
-initDb();
+const dbWrapper = {
+  prepare: (sql: string) => {
+    return {
+      run: async (...args: any[]) => {
+        const normalizedArgs = args.length === 1 && typeof args[0] === 'object' && args[0] !== null && !Array.isArray(args[0]) ? args[0] : args;
+        const res = await db.execute({ sql, args: normalizedArgs });
+        return {
+          changes: res.rowsAffected,
+          lastInsertRowid: res.lastInsertRowid ? Number(res.lastInsertRowid) : 0
+        };
+      },
+      get: async (...args: any[]) => {
+        const normalizedArgs = args.length === 1 && typeof args[0] === 'object' && args[0] !== null && !Array.isArray(args[0]) ? args[0] : args;
+        return (await db.execute({ sql, args: normalizedArgs })).rows[0];
+      },
+      all: async (...args: any[]) => {
+        const normalizedArgs = args.length === 1 && typeof args[0] === 'object' && args[0] !== null && !Array.isArray(args[0]) ? args[0] : args;
+        return (await db.execute({ sql, args: normalizedArgs })).rows;
+      }
+    };
+  },
+  execute: async (sql: string) => await db.execute(sql),
+  executeMultiple: async (sql: string) => await db.executeMultiple(sql),
+};
 
-export default db;
+export default dbWrapper;

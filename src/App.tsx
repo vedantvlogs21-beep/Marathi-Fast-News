@@ -463,86 +463,87 @@ export default function App() {
       )}
 
       {/* Footer component */}
-      <footer className="bg-slate-950 text-slate-400 py-12 md:py-16 mt-auto border-t border-slate-900 relative overflow-hidden" id="portal-footer">
-        {/* Subtle background glow effect */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 max-w-2xl h-32 bg-blue-500/10 blur-[100px] rounded-full pointer-events-none" />
+      {activeTab !== 'admin' && (
+        <footer className="bg-slate-950 text-slate-400 py-12 md:py-16 mt-auto border-t border-slate-900 relative overflow-hidden" id="portal-footer">
+          {/* Subtle background glow effect */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 max-w-2xl h-32 bg-blue-500/10 blur-[100px] rounded-full pointer-events-none" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 lg:gap-8">
-            
-            {/* Brand & Description Column */}
-            <div className="md:col-span-2 space-y-6">
-              <div className="flex items-center space-x-2">
-                <div className="bg-blue-600 text-white p-1.5 rounded-lg shadow-lg shadow-blue-900/20">
-                  <Compass className="h-5 w-5" />
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 lg:gap-8">
+              
+              {/* Brand & Description Column */}
+              <div className="md:col-span-2 space-y-6">
+                <div className="flex items-center space-x-2">
+                  <div className="bg-blue-600 text-white p-1.5 rounded-lg shadow-lg shadow-blue-900/20">
+                    <Compass className="h-5 w-5" />
+                  </div>
+                  <span className="font-display font-extrabold text-xl text-white tracking-tight">{getUITranslation("app_title", appLanguage)}</span>
                 </div>
-                <span className="font-display font-extrabold text-xl text-white tracking-tight">{getUITranslation("app_title", appLanguage)}</span>
+                <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
+                  Engineering the future of journalism with uncompromising truth and speed. Bringing you real-time updates and breaking news across Maharashtra.
+                </p>
               </div>
-              <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
-                Engineering the future of journalism with uncompromising truth and speed. Bringing you real-time updates and breaking news across Maharashtra.
+
+              {/* Links Column 1 */}
+              <div>
+                <h4 className="text-white font-bold text-sm mb-4">Categories</h4>
+                <ul className="space-y-2.5 text-xs">
+                  <li><button onClick={() => { setActiveTab('home'); setSelectedCategory('Politics'); window.scrollTo(0,0); }} className="hover:text-blue-400 transition-colors">Politics</button></li>
+                  <li><button onClick={() => { setActiveTab('home'); setSelectedCategory('Technology'); window.scrollTo(0,0); }} className="hover:text-blue-400 transition-colors">Technology</button></li>
+                  <li><button onClick={() => { setActiveTab('home'); setSelectedCategory('Business'); window.scrollTo(0,0); }} className="hover:text-blue-400 transition-colors">Business</button></li>
+                  <li><button onClick={() => { setActiveTab('home'); setSelectedCategory('Sports'); window.scrollTo(0,0); }} className="hover:text-blue-400 transition-colors">Sports</button></li>
+                  <li><button onClick={() => { setActiveTab('home'); setSelectedCategory('Science'); window.scrollTo(0,0); }} className="hover:text-blue-400 transition-colors">Science</button></li>
+                  <li><button onClick={() => { setActiveTab('home'); setSelectedCategory('Entertainment'); window.scrollTo(0,0); }} className="hover:text-blue-400 transition-colors">Entertainment</button></li>
+                </ul>
+              </div>
+
+              {/* Links Column 2: Contact Info */}
+              <div>
+                <h4 className="text-white font-bold text-sm mb-4">Contact Us</h4>
+                <ul className="space-y-4 text-xs">
+                  <li className="flex items-start space-x-3">
+                    <UserIcon className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                    <div className="text-slate-400">
+                      <p className="font-semibold text-white">सम्यक सिद्धार्थ वाहुरवाघ</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">Founder of the Website</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start space-x-3">
+                    <Phone className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                    <a href="tel:7972055169" className="text-slate-400 hover:text-blue-400 transition-colors">
+                      +91 7972055169
+                    </a>
+                  </li>
+                  <li className="flex items-start space-x-3">
+                    <Mail className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                    <a href="mailto:roshani93wahurwagh@gmail.com" className="text-slate-400 hover:text-blue-400 transition-colors break-all">
+                      roshani93wahurwagh@gmail.com
+                    </a>
+                  </li>
+                  <li className="pt-2">
+                    <a href="#" className="text-slate-500 hover:text-white transition-colors inline-block">Privacy Policy</a>
+                  </li>
+                  <li>
+                    <a href="#" className="text-slate-500 hover:text-white transition-colors">Terms of Service</a>
+                  </li>
+                </ul>
+              </div>
+
+            </div>
+
+            <div className="mt-12 pt-8 border-t border-slate-900 flex flex-col md:flex-row items-center justify-between gap-4">
+              <p className="text-xs text-slate-600 font-mono">
+                {getUITranslation("footer_rights", appLanguage)}
+              </p>
+              <p className="text-[10px] text-slate-600 font-mono uppercase tracking-widest">
+                Developed by Vedant Prakash Dhawane
               </p>
             </div>
-
-            {/* Links Column 1 */}
-            <div>
-              <h4 className="text-white font-bold text-sm mb-4">Categories</h4>
-              <ul className="space-y-2.5 text-xs">
-                <li><button onClick={() => { setActiveTab('home'); setSelectedCategory('Politics'); window.scrollTo(0,0); }} className="hover:text-blue-400 transition-colors">Politics</button></li>
-                <li><button onClick={() => { setActiveTab('home'); setSelectedCategory('Technology'); window.scrollTo(0,0); }} className="hover:text-blue-400 transition-colors">Technology</button></li>
-                <li><button onClick={() => { setActiveTab('home'); setSelectedCategory('Business'); window.scrollTo(0,0); }} className="hover:text-blue-400 transition-colors">Business</button></li>
-                <li><button onClick={() => { setActiveTab('home'); setSelectedCategory('Sports'); window.scrollTo(0,0); }} className="hover:text-blue-400 transition-colors">Sports</button></li>
-                <li><button onClick={() => { setActiveTab('home'); setSelectedCategory('Science'); window.scrollTo(0,0); }} className="hover:text-blue-400 transition-colors">Science</button></li>
-                <li><button onClick={() => { setActiveTab('home'); setSelectedCategory('Entertainment'); window.scrollTo(0,0); }} className="hover:text-blue-400 transition-colors">Entertainment</button></li>
-              </ul>
-            </div>
-
-            {/* Links Column 2: Contact Info */}
-            <div>
-              <h4 className="text-white font-bold text-sm mb-4">Contact Us</h4>
-              <ul className="space-y-4 text-xs">
-                <li className="flex items-start space-x-3">
-                  <UserIcon className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                  <div className="text-slate-400">
-                    <p className="font-semibold text-white">सम्यक सिद्धार्थ वाहुरवाघ</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Founder of the Website</p>
-                  </div>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <Phone className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                  <a href="tel:7972055169" className="text-slate-400 hover:text-blue-400 transition-colors">
-                    +91 7972055169
-                  </a>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <Mail className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                  <a href="mailto:roshani93wahurwagh@gmail.com" className="text-slate-400 hover:text-blue-400 transition-colors break-all">
-                    roshani93wahurwagh@gmail.com
-                  </a>
-                </li>
-                <li className="pt-2">
-                  <a href="#" className="text-slate-500 hover:text-white transition-colors inline-block">Privacy Policy</a>
-                </li>
-                <li>
-                  <a href="#" className="text-slate-500 hover:text-white transition-colors">Terms of Service</a>
-                </li>
-              </ul>
-            </div>
-
           </div>
-
-          <div className="mt-12 pt-8 border-t border-slate-900 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-slate-600 font-mono">
-              {getUITranslation("footer_rights", appLanguage)}
-            </p>
-            <p className="text-[10px] text-slate-600 font-mono uppercase tracking-widest">
-              Developed by Vedant Prakash Dhawane
-            </p>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      )}
 
     </div>
   );
 }
-  

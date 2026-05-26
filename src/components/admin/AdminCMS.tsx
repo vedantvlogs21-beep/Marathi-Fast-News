@@ -580,7 +580,7 @@ export default function AdminCMS({
 
                       {/* Action buttons panel */}
                       <td className="p-4 pr-6 text-right align-middle">
-                        <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end space-x-2">
                           <button
                             onClick={() => handleEditTrigger(art)}
                             className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-blue-100"

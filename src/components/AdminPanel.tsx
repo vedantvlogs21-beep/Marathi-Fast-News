@@ -156,8 +156,8 @@ export default function AdminPanel({
 
       {/* Dark Sidebar */}
       <div className={`
-        fixed lg:sticky top-0 lg:top-16 left-0 h-full lg:h-[calc(100vh-64px)] 
-        w-64 bg-slate-950 text-slate-300 z-50 flex flex-col border-r border-white/5
+        fixed lg:fixed top-0 lg:top-16 left-0 h-full lg:h-[calc(100vh-64px)] 
+        w-64 bg-slate-950 text-slate-300 z-50 lg:z-30 flex flex-col border-r border-white/5
         transition-transform duration-300 ease-in-out
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
@@ -222,7 +222,7 @@ export default function AdminPanel({
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden lg:pl-64">
         
         {/* Mobile Header Toggle */}
         <div className="lg:hidden flex items-center gap-3 p-4 bg-white border-b border-slate-100 shadow-sm">

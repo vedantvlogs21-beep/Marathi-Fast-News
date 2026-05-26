@@ -146,7 +146,7 @@ export default function App() {
 
   const handleToggleSaveArticle = async (articleId: string) => {
     if (!currentUser) {
-      setShowAuthModal(true);
+      alert("Please sign in to bookmark articles.");
       return;
     }
 
@@ -296,7 +296,7 @@ export default function App() {
                         onClick={() => {
                           setSelectedArticleId(featuredStory.id);
                         }}
-                        className="px-5 py-3 bg-red-600/35 hover:bg-red-650/50 text-white rounded-xl text-xs font-bold border border-red-500/40 backdrop-blur-sm transition-all cursor-pointer flex items-center space-x-2"
+                        className="px-5 py-3 bg-red-650/35 hover:bg-red-650/50 text-white rounded-xl text-xs font-bold border border-red-500/40 backdrop-blur-sm transition-all cursor-pointer flex items-center space-x-2"
                       >
                         <Video className="h-4 w-4 animate-pulse text-red-400" />
                         <span>{getUITranslation("watch_video", appLanguage)}</span>
@@ -406,7 +406,7 @@ export default function App() {
 
             {!currentUser ? (
               <div className="bg-white rounded-3xl p-12 text-center border max-w-sm mx-auto">
-                <Compass className="h-10 w-10 mx-auto stroke-1 text-slate-300 mb-3 animate-bounce" />
+                <Compass className="h-10 w-10 mx-auto stroke-1 text-slate-350 mb-3 animate-bounce" />
                 <h3 className="font-display font-bold text-sm text-slate-800">{getUITranslation("unloaded_title", appLanguage)}</h3>
                 <p className="text-xs text-slate-500 leading-relaxed mt-2">
                   {getUITranslation("unloaded_desc", appLanguage)}
@@ -455,8 +455,6 @@ export default function App() {
         />
       )}
 
-
-
       {showNotifDrawer && (
         <NotificationDrawer
           onClose={() => setShowNotifDrawer(false)}
@@ -474,7 +472,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 lg:gap-8">
             
-            {/* Brand & Founder Column */}
+            {/* Brand & Description Column */}
             <div className="md:col-span-2 space-y-6">
               <div className="flex items-center space-x-2">
                 <div className="bg-blue-600 text-white p-1.5 rounded-lg shadow-lg shadow-blue-900/20">
@@ -482,36 +480,9 @@ export default function App() {
                 </div>
                 <span className="font-display font-extrabold text-xl text-white tracking-tight">{getUITranslation("app_title", appLanguage)}</span>
               </div>
-              
-              {/* Founder Profile - Ultra Modern Bento */}
-              <div className="mt-8 flex bg-[#0B0F19] rounded-[24px] border border-white/[0.04] overflow-hidden group hover:border-white/[0.08] transition-colors duration-500">
-                <div className="flex-shrink-0 w-32 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-blue-500/10 mix-blend-overlay z-10 group-hover:opacity-0 transition-opacity duration-500"></div>
-                  <img 
-                    src="/founder.png" 
-                    alt="सम्यक सिद्धार्थ वाहुरवाघ" 
-                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = 'https://ui-avatars.com/api/?name=Samyak+Siddharth&background=0f172a&color=3b82f6&size=256';
-                    }}
-                  />
-                </div>
-                <div className="flex flex-col justify-center p-6 flex-1">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="h-1.5 w-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>
-                    <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Founder</span>
-                  </div>
-                  <h5 className="text-white text-[17px] font-bold tracking-tight mb-2.5">सम्यक सिद्धार्थ वाहुरवाघ</h5>
-                  <p className="text-[11px] text-slate-500 font-medium leading-relaxed mb-5">
-                    Engineering the future of journalism with uncompromising truth and speed.
-                  </p>
-                  <div className="flex gap-4">
-                    <a href="#" className="text-slate-600 hover:text-blue-400 transition-colors"><Twitter className="h-4 w-4" /></a>
-                    <a href="#" className="text-slate-600 hover:text-pink-500 transition-colors"><Instagram className="h-4 w-4" /></a>
-                    <a href="#" className="text-slate-600 hover:text-red-500 transition-colors"><Youtube className="h-4 w-4" /></a>
-                  </div>
-                </div>
-              </div>
+              <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
+                Engineering the future of journalism with uncompromising truth and speed. Bringing you real-time updates and breaking news across Maharashtra.
+              </p>
             </div>
 
             {/* Links Column 1 */}
@@ -532,12 +503,6 @@ export default function App() {
               <h4 className="text-white font-bold text-sm mb-4">Contact Us</h4>
               <ul className="space-y-4 text-xs">
                 <li className="flex items-start space-x-3">
-                  <UserIcon className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                  <span className="text-slate-300 font-medium text-[13px]">
-                    Siddharth Wahurwagh
-                  </span>
-                </li>
-                <li className="flex items-start space-x-3">
                   <Phone className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                   <a href="tel:7972055169" className="text-slate-400 hover:text-blue-400 transition-colors">
                     +91 7972055169
@@ -557,8 +522,6 @@ export default function App() {
                 </li>
               </ul>
             </div>
-
-
 
           </div>
 

@@ -9,6 +9,7 @@ import { getUITranslation, Language } from '../utils/translation';
 
 interface ArticleModalProps {
   articleId: string;
+  articles: Article[];
   currentUser: User | null;
   onClose: () => void;
   onLike: (id: string, updatedLikes: number) => void;
@@ -18,16 +19,19 @@ interface ArticleModalProps {
 
 export default function ArticleModal({
   articleId,
+  articles,
   currentUser,
   onClose,
   onLike,
   onAddCommentCount,
   appLanguage
 }: ArticleModalProps) {
-  const [article, setArticle] = useState<Article | null>(null);
+  const [article, setArticle] = useState<Article | null>(() => {
+    return articles.find(a => a.id === articleId) || null;
+  });
   const [comments, setComments] = useState<Comment[]>([]);
   const [newCommentText, setNewCommentText] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!article);
   
   // Custom Live Stream view toggle
   const [isPlayingStream, setIsPlayingStream] = useState(false);
@@ -295,7 +299,16 @@ export default function ArticleModal({
               {article.source} {getUITranslation("report_suffix", appLanguage)}
             </span>
             <h2 className="font-display font-extrabold text-xl md:text-2xl text-slate-900 leading-tight">
-              {currentLanguage === 'mr' ? translatedTitle : article.title}
+              {isTranslatingArticle ? (
+                <span className="flex items-center gap-2 text-slate-400 text-xs font-mono">
+                  <span className="inline-block h-3 w-3 border-2 border-slate-350 border-t-slate-800 rounded-full animate-spin" />
+                  <span>भाषांतर होत आहे / Translating title...</span>
+                </span>
+              ) : currentLanguage === 'mr' ? (
+                translatedTitle || article.title
+              ) : (
+                article.title
+              )}
             </h2>
             
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 font-mono mt-3">
@@ -424,44 +437,22 @@ export default function ArticleModal({
           <div className="space-y-4">
             <h3 className="font-display font-bold text-slate-900 border-b pb-2 hidden">Main Article Information</h3>
             
-            {/* Marathi Language Toggle Panel */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between border border-slate-100 p-3.5 rounded-2xl bg-slate-50 gap-3">
-              <div className="flex items-center space-x-2.5">
-                <div className="p-2 bg-slate-900 text-white rounded-xl shrink-0">
-                  <Languages className="h-4 w-4" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900">{getUITranslation("multilang_broadcaster", appLanguage)}</h4>
-                  <p className="text-[10px] text-slate-500 font-sans">{getUITranslation("translate_tooltip", appLanguage)}</p>
-                </div>
+            {isTranslatingArticle ? (
+              <div className="space-y-3 py-4">
+                <p className="flex items-center gap-2 text-slate-400 text-xs font-mono mb-2">
+                  <span className="inline-block h-3 w-3 border-2 border-slate-300 border-t-slate-900 rounded-full animate-spin shrink-0" />
+                  <span>लेख भाषांतरित केला जात आहे / Translating article contents...</span>
+                </p>
+                <div className="h-4 bg-slate-100 rounded w-full animate-pulse" />
+                <div className="h-4 bg-slate-100 rounded w-11/12 animate-pulse" />
+                <div className="h-4 bg-slate-100 rounded w-5/6 animate-pulse" />
+                <div className="h-4 bg-slate-100 rounded w-4/5 animate-pulse" />
               </div>
-
-              <button
-                type="button"
-                onClick={handleTranslateArticle}
-                disabled={isTranslatingArticle}
-                className={`px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center space-x-1.5 shrink-0 ${
-                  currentLanguage === 'mr'
-                    ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                    : 'bg-slate-900 text-white hover:bg-slate-800'
-                }`}
-              >
-                {isTranslatingArticle ? (
-                  <>
-                    <span className="inline-block h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1.5" />
-                    <span>Translating...</span>
-                  </>
-                ) : currentLanguage === 'mr' ? (
-                  <span>{getUITranslation("to_english", appLanguage)}</span>
-                ) : (
-                  <span>{getUITranslation("to_marathi", appLanguage)}</span>
-                )}
-              </button>
-            </div>
-
-            <p className="text-sm md:text-base text-slate-700 leading-relaxed font-sans first-letter:text-4xl first-letter:font-extrabold first-letter:float-left first-letter:mr-2.5 first-letter:font-display">
-              {currentLanguage === 'mr' ? translatedContent : article.content}
-            </p>
+            ) : (
+              <p className="text-sm md:text-base text-slate-700 leading-relaxed font-sans first-letter:text-4xl first-letter:font-extrabold first-letter:float-left first-letter:mr-2.5 first-letter:font-display animate-fade-in">
+                {currentLanguage === 'mr' ? translatedContent : article.content}
+              </p>
+            )}
             
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center space-x-3 text-xs leading-relaxed text-slate-500">
               <Compass className="h-5 w-5 text-slate-400 shrink-0" />
@@ -471,87 +462,7 @@ export default function ArticleModal({
             </div>
           </div>
 
-          {/* User Comments Thread Division */}
-          <div className="pt-6 border-t border-slate-150 space-y-6" id="comments-thread-division">
-            <div className="flex items-center space-x-2">
-              <MessageSquare className="h-5 w-5 text-slate-750" />
-              <h3 className="font-display font-extrabold text-slate-900 tracking-tight">
-                {getUITranslation("reflections_block", appLanguage)} ({comments.length})
-              </h3>
-            </div>
 
-            {/* Posting Form */}
-            {currentUser ? (
-              <form onSubmit={handleSubmitComment} className="flex space-x-3 items-start" id="submit-comment-form">
-                <div className="bg-slate-100 h-8 w-8 rounded-full flex items-center justify-center shrink-0 border border-slate-205">
-                  <span className="text-[10px] font-mono font-bold text-slate-600 uppercase">
-                    {currentUser.username.slice(0, 2)}
-                  </span>
-                </div>
-                
-                <div className="flex-1 relative">
-                  <textarea
-                    rows={2}
-                    placeholder={getUITranslation("placeholder_post", appLanguage)}
-                    value={newCommentText}
-                    onChange={(e) => setNewCommentText(e.target.value)}
-                    required
-                    className="w-full p-3.5 border border-slate-200 rounded-2xl text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none bg-slate-50 text-slate-800 placeholder-slate-450 leading-relaxed resize-none"
-                    id="comment-textarea"
-                  />
-                  
-                  <div className="flex justify-end pt-2">
-                    <button
-                      type="submit"
-                      className="px-4 py-1.8 bg-slate-900 text-white hover:bg-slate-800 rounded-lg text-xs font-bold transition-all flex items-center space-x-1 shadow-sm cursor-pointer"
-                      id="comment-submit-btn"
-                    >
-                      <Send className="h-3 w-3" />
-                      <span>{getUITranslation("post_reflection", appLanguage)}</span>
-                    </button>
-                  </div>
-                </div>
-              </form>
-            ) : (
-              <div className="p-4 bg-slate-50 border border-dashed rounded-2xl text-center text-xs text-slate-500">
-                {getUITranslation("please_login_post", appLanguage)}
-              </div>
-            )}
-
-            {/* List Array Render */}
-            <div className="space-y-4" id="comments-render-list">
-              {comments.length === 0 ? (
-                <p className="text-xs text-slate-400 italic text-center py-6">{getUITranslation("first_comment", appLanguage)}</p>
-              ) : (
-                comments.map(c => (
-                  <div key={c.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex space-x-3 items-start animate-fade-in">
-                    {/* User letter indicator */}
-                    <div className="bg-slate-200 h-7 w-7 rounded-full flex items-center justify-center shrink-0 border border-slate-300">
-                      <span className="text-[9px] font-semibold text-slate-700 font-mono uppercase">
-                        {c.username.slice(0, 2)}
-                      </span>
-                    </div>
-
-                    <div className="flex-1 text-xs">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="font-bold text-slate-800 font-mono">@{c.username}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          {new Date(c.timestamp).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
-                      </div>
-                      <p className="text-slate-600 leading-relaxed font-sans">{c.content}</p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-          </div>
 
         </div>
 

@@ -146,7 +146,7 @@ export default function App() {
 
   const handleToggleSaveArticle = async (articleId: string) => {
     if (!currentUser) {
-      setShowAuthModal(true);
+      alert("Please sign in to bookmark articles.");
       return;
     }
 
@@ -296,7 +296,7 @@ export default function App() {
                         onClick={() => {
                           setSelectedArticleId(featuredStory.id);
                         }}
-                        className="px-5 py-3 bg-red-600/35 hover:bg-red-650/50 text-white rounded-xl text-xs font-bold border border-red-500/40 backdrop-blur-sm transition-all cursor-pointer flex items-center space-x-2"
+                        className="px-5 py-3 bg-red-650/35 hover:bg-red-650/50 text-white rounded-xl text-xs font-bold border border-red-500/40 backdrop-blur-sm transition-all cursor-pointer flex items-center space-x-2"
                       >
                         <Video className="h-4 w-4 animate-pulse text-red-400" />
                         <span>{getUITranslation("watch_video", appLanguage)}</span>
@@ -406,7 +406,7 @@ export default function App() {
 
             {!currentUser ? (
               <div className="bg-white rounded-3xl p-12 text-center border max-w-sm mx-auto">
-                <Compass className="h-10 w-10 mx-auto stroke-1 text-slate-300 mb-3 animate-bounce" />
+                <Compass className="h-10 w-10 mx-auto stroke-1 text-slate-350 mb-3 animate-bounce" />
                 <h3 className="font-display font-bold text-sm text-slate-800">{getUITranslation("unloaded_title", appLanguage)}</h3>
                 <p className="text-xs text-slate-500 leading-relaxed mt-2">
                   {getUITranslation("unloaded_desc", appLanguage)}
@@ -454,8 +454,6 @@ export default function App() {
           appLanguage={appLanguage}
         />
       )}
-
-
 
       {showNotifDrawer && (
         <NotificationDrawer
@@ -525,8 +523,6 @@ export default function App() {
               </ul>
             </div>
 
-
-
           </div>
 
           <div className="mt-12 pt-8 border-t border-slate-900 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -543,4 +539,3 @@ export default function App() {
     </div>
   );
 }
-  

@@ -8,9 +8,6 @@ import { getUITranslation, Language } from '../utils/translation';
 
 import AdminAnalytics from './admin/AdminAnalytics';
 import AdminCMS from './admin/AdminCMS';
-import AdminUsers from './admin/AdminUsers';
-import AdminComments from './admin/AdminComments';
-import AdminDispatch from './admin/AdminDispatch';
 
 interface AdminPanelProps {
   currentUser: User | null;
@@ -20,7 +17,7 @@ interface AdminPanelProps {
   language?: Language;
 }
 
-type TabKey = 'analytics' | 'cms' | 'users' | 'comments' | 'dispatch';
+type TabKey = 'analytics' | 'cms';
 
 export default function AdminPanel({
   currentUser,
@@ -41,13 +38,8 @@ export default function AdminPanel({
   const [generatingInsight, setGeneratingInsight] = useState(false);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
 
-  // Users states
-  const [usersList, setUsersList] = useState<User[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-
   useEffect(() => {
     fetchAnalytics();
-    fetchUsers();
   }, []);
 
   const fetchAnalytics = async () => {
@@ -67,22 +59,7 @@ export default function AdminPanel({
     }
   };
 
-  const fetchUsers = async () => {
-    try {
-      setLoadingUsers(true);
-      const res = await fetch('/api/admin/users', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setUsersList(data);
-      }
-    } catch (err) {
-      console.warn(err);
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
+
 
   const handleGenerateAIStrategy = async () => {
     if (!analytics) return;
@@ -138,9 +115,6 @@ export default function AdminPanel({
   const tabs: { key: TabKey, icon: any, labelEn: string, labelMr: string, badge?: number }[] = [
     { key: 'analytics', icon: LineChart, labelEn: 'Website Stats', labelMr: 'वेबसाइट आकडेवारी' },
     { key: 'cms', icon: FileText, labelEn: 'Manage Articles', labelMr: 'लेख व्यवस्थापन', badge: articles.length },
-    { key: 'users', icon: Users, labelEn: 'Manage Users', labelMr: 'वापरकर्ता व्यवस्थापन', badge: usersList.length },
-    { key: 'comments', icon: MessageSquare, labelEn: 'Manage Comments', labelMr: 'टिप्पण्या व्यवस्थापन', badge: analytics?.totalComments },
-    { key: 'dispatch', icon: BellRing, labelEn: 'Breaking News', labelMr: 'महत्त्वाची बातमी' },
   ];
 
   return (
@@ -276,33 +250,7 @@ export default function AdminPanel({
               />
             )}
 
-            {activeTab === 'users' && (
-              <AdminUsers 
-                currentUser={currentUser}
-                usersList={usersList}
-                loadingUsers={loadingUsers}
-                fetchUsers={fetchUsers}
-                fetchAnalytics={fetchAnalytics}
-                language={lang}
-                setGlobalSuccessMsg={setSuccessMsg}
-              />
-            )}
 
-            {activeTab === 'comments' && (
-              <AdminComments 
-                language={lang}
-                setGlobalSuccessMsg={setSuccessMsg}
-                fetchAnalytics={fetchAnalytics}
-              />
-            )}
-
-            {activeTab === 'dispatch' && (
-              <AdminDispatch 
-                articles={articles}
-                language={lang}
-                setGlobalSuccessMsg={setSuccessMsg}
-              />
-            )}
 
           </div>
         </div>

@@ -351,7 +351,7 @@ export default function App() {
                 <h3 className="font-display font-bold text-sm text-slate-800">{getUITranslation("no_coverage_matched", appLanguage)}</h3>
                 <p className="text-xs text-slate-400 leading-relaxed mt-2.5">
                   {getUITranslation("no_coverage_desc", appLanguage)}
-                </p>  
+                </p>
                 <button
                   onClick={() => {
                     setSelectedCategory('All');
@@ -543,3 +543,4 @@ export default function App() {
     </div>
   );
 }
+  

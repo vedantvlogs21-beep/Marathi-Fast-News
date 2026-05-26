@@ -201,7 +201,6 @@ export default function App() {
       {/* Top Header & Navigation Ribbon */}
       <Header
         currentUser={currentUser}
-        onLogout={handleLogout}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         activeTab={activeTab}
@@ -503,6 +502,13 @@ export default function App() {
               <h4 className="text-white font-bold text-sm mb-4">Contact Us</h4>
               <ul className="space-y-4 text-xs">
                 <li className="flex items-start space-x-3">
+                  <UserIcon className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                  <div className="text-slate-400">
+                    <p className="font-semibold text-white">सम्यक सिद्धार्थ वाहुरवाघ</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Founder of the Website</p>
+                  </div>
+                </li>
+                <li className="flex items-start space-x-3">
                   <Phone className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                   <a href="tel:7972055169" className="text-slate-400 hover:text-blue-400 transition-colors">
                     +91 7972055169
@@ -539,4 +545,3 @@ export default function App() {
     </div>
   );
 }
-  

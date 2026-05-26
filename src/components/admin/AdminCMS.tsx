@@ -44,9 +44,11 @@ export default function AdminCMS({
   const [mediaType, setMediaType] = useState<'image' | 'video' | 'standard'>('image');
   const [cmsError, setCmsError] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSaveCMS = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     setCmsError('');
 
     if (!title.trim() || !content.trim() || !author.trim() || !source.trim()) {
@@ -72,6 +74,7 @@ export default function AdminCMS({
     const method = editingId ? 'PUT' : 'POST';
 
     try {
+      setSubmitting(true);
       const res = await fetch(url, {
         method,
         headers: { 
@@ -97,6 +100,8 @@ export default function AdminCMS({
       fetchAnalytics();
     } catch (err: any) {
       setCmsError(err.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -194,8 +199,8 @@ export default function AdminCMS({
   };
 
   const filteredArticles = articles.filter(art => {
-    const matchesSearch = art.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          art.author.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (art.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (art.author || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = filterCategory === 'All' || art.category === filterCategory;
     return matchesSearch && matchesCategory;
   });
@@ -457,9 +462,15 @@ export default function AdminCMS({
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 bg-slate-900 text-white hover:bg-slate-800 rounded-xl text-sm font-bold shadow-md cursor-pointer"
+              disabled={submitting}
+              className={`px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold shadow-md flex items-center justify-center gap-1.5 transition-all ${
+                submitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-800 cursor-pointer'
+              }`}
             >
-              {editingId ? getUITranslation("apply_mod_btn", lang) : getUITranslation("issue_pub_btn", lang)}
+              {submitting && (
+                <span className="inline-block h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1" />
+              )}
+              <span>{editingId ? getUITranslation("apply_mod_btn", lang) : getUITranslation("issue_pub_btn", lang)}</span>
             </button>
           </div>
         </form>

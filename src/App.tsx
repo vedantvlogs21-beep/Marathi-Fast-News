@@ -446,6 +446,7 @@ export default function App() {
       {selectedArticleId && (
         <ArticleModal
           articleId={selectedArticleId}
+          articles={articles}
           currentUser={currentUser}
           onClose={() => setSelectedArticleId(null)}
           onLike={handleLikeUpdate}
@@ -505,8 +506,12 @@ export default function App() {
                   <li className="flex items-start space-x-3">
                     <UserIcon className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                     <div className="text-slate-400">
-                      <p className="font-semibold text-white">सम्यक सिद्धार्थ वाहुरवाघ</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">Founder of the Website</p>
+                      <p className="font-semibold text-white">
+                        {appLanguage === 'mr' ? 'सम्यक सिद्धार्थ वाहुरवाघ' : 'Samyak Siddharth Wahurwagh'}
+                      </p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        {appLanguage === 'mr' ? 'वेबसाइटचे संस्थापक' : 'Founder of the Website'}
+                      </p>
                     </div>
                   </li>
                   <li className="flex items-start space-x-3">

@@ -669,6 +669,10 @@ app.post("/api/ai/admin-insights", authenticateToken, requireAdmin, async (req, 
   }
 });
 
+app.get("/googlea4015d58ba6aed96.html", (req: any, res: any) => {
+  res.sendFile(path.join(process.cwd(), "googlea4015d58ba6aed96.html"));
+});
+
 // ==========================================
 // Vite Dev & Production Asset Pipelines Setup
 // ==========================================

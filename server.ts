@@ -673,6 +673,41 @@ app.get("/googlea4015d58ba6aed96.html", (req: any, res: any) => {
   res.send("google-site-verification: googlea4015d58ba6aed96.html");
 });
 
+app.get("/sitemap.xml", async (req: any, res: any) => {
+  try {
+    const articles = await db.prepare('SELECT id, publishedAt FROM articles ORDER BY publishedAt DESC').all() as any[];
+    
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+    
+    // Add homepage
+    xml += `  <url>\n`;
+    xml += `    <loc>https://marathi-fast-news.vercel.app/</loc>\n`;
+    xml += `    <changefreq>daily</changefreq>\n`;
+    xml += `    <priority>1.0</priority>\n`;
+    xml += `  </url>\n`;
+    
+    // Add dynamic articles
+    articles.forEach(art => {
+      const dateStr = art.publishedAt ? new Date(art.publishedAt).toISOString() : new Date().toISOString();
+      xml += `  <url>\n`;
+      xml += `    <loc>https://marathi-fast-news.vercel.app/?story=${art.id}</loc>\n`;
+      xml += `    <lastmod>${dateStr}</lastmod>\n`;
+      xml += `    <changefreq>weekly</changefreq>\n`;
+      xml += `    <priority>0.8</priority>\n`;
+      xml += `  </url>\n`;
+    });
+    
+    xml += `</urlset>`;
+    
+    res.header('Content-Type', 'application/xml');
+    res.send(xml);
+  } catch (err) {
+    console.error("Sitemap generation error:", err);
+    res.status(500).send("Error generating sitemap");
+  }
+});
+
 // ==========================================
 // Vite Dev & Production Asset Pipelines Setup
 // ==========================================

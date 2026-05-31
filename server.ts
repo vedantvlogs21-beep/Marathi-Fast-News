@@ -689,7 +689,17 @@ app.get("/sitemap.xml", async (req: any, res: any) => {
     
     // Add dynamic articles
     articles.forEach(art => {
-      const dateStr = art.publishedAt ? new Date(art.publishedAt).toISOString() : new Date().toISOString();
+      let dateStr = new Date().toISOString();
+      if (art.publishedAt) {
+        try {
+          const parsed = new Date(art.publishedAt);
+          if (!isNaN(parsed.getTime())) {
+            dateStr = parsed.toISOString();
+          }
+        } catch (e) {
+          // Fallback to current date
+        }
+      }
       xml += `  <url>\n`;
       xml += `    <loc>https://marathi-fast-news.vercel.app/?story=${art.id}</loc>\n`;
       xml += `    <lastmod>${dateStr}</lastmod>\n`;

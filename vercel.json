@@ -19,6 +19,14 @@
       "destination": "/server.ts"
     },
     {
+      "source": "/sitemap.xsl",
+      "destination": "/server.ts"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/server.ts"
+    },
+    {
       "source": "/googlea4015d58ba6aed96.html",
       "destination": "/server.ts"
     },

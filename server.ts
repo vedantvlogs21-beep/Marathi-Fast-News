@@ -674,10 +674,32 @@ app.get("/googlea4015d58ba6aed96.html", (req: any, res: any) => {
 });
 
 app.get("/sitemap.xml", async (req: any, res: any) => {
+  res.setHeader("Content-Type", "application/xml");
+  res.setHeader("Cache-Control", "public, max-age=0, s-maxage=86400, stale-while-revalidate=3600");
+
+  const escapeXml = (str: string) => {
+    return str.replace(/[<>&'"]/g, (c) => {
+      switch (c) {
+        case '<': return '&lt;';
+        case '>': return '&gt;';
+        case '&': return '&amp;';
+        case '\'': return '&apos;';
+        case '"': return '&quot;';
+        default: return c;
+      }
+    });
+  };
+
   try {
-    const articles = await db.prepare('SELECT id, publishedAt FROM articles ORDER BY publishedAt DESC').all() as any[];
+    let articles: any[] = [];
+    try {
+      articles = await db.prepare('SELECT id, publishedAt FROM articles ORDER BY publishedAt DESC').all() as any[];
+    } catch (dbErr) {
+      console.error("Sitemap DB fetch error, falling back to static homepage sitemap:", dbErr);
+    }
     
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>\n`;
     xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
     
     // Add homepage
@@ -700,8 +722,9 @@ app.get("/sitemap.xml", async (req: any, res: any) => {
           // Fallback to current date
         }
       }
+      const safeId = escapeXml(encodeURIComponent(art.id));
       xml += `  <url>\n`;
-      xml += `    <loc>https://marathi-fast-news.vercel.app/?story=${art.id}</loc>\n`;
+      xml += `    <loc>https://marathi-fast-news.vercel.app/?story=${safeId}</loc>\n`;
       xml += `    <lastmod>${dateStr}</lastmod>\n`;
       xml += `    <changefreq>weekly</changefreq>\n`;
       xml += `    <priority>0.8</priority>\n`;
@@ -709,11 +732,9 @@ app.get("/sitemap.xml", async (req: any, res: any) => {
     });
     
     xml += `</urlset>`;
-    
-    res.header('Content-Type', 'application/xml');
     res.send(xml);
   } catch (err) {
-    console.error("Sitemap generation error:", err);
+    console.error("Sitemap generation critical error:", err);
     res.status(500).send("Error generating sitemap");
   }
 });

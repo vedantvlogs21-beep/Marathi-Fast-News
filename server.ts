@@ -852,8 +852,7 @@ app.get("/sitemap.xml", async (req: any, res: any) => {
       console.error("Sitemap DB fetch error, falling back to static homepage sitemap:", dbErr);
     }
     
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    xml += `<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>\n`;
+     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
     xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
     
     // Add homepage
@@ -865,12 +864,12 @@ app.get("/sitemap.xml", async (req: any, res: any) => {
     
     // Add dynamic articles
     articles.forEach(art => {
-      let dateStr = new Date().toISOString();
+      let dateStr = new Date().toISOString().split('.')[0] + 'Z';
       if (art.publishedAt) {
         try {
           const parsed = new Date(art.publishedAt);
           if (!isNaN(parsed.getTime())) {
-            dateStr = parsed.toISOString();
+            dateStr = parsed.toISOString().split('.')[0] + 'Z';
           }
         } catch (e) {
           // Fallback to current date

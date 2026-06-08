@@ -31,6 +31,10 @@
       "destination": "/server.ts"
     },
     {
+      "source": "/google5e1aeb200aeeae95.html",
+      "destination": "/server.ts"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/server.ts"
     },
@@ -40,4 +44,3 @@
     }
   ]
 }
-  

@@ -31,7 +31,7 @@
       "destination": "/server.ts"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!.*\\.(xml|xsl|txt|ico|png|jpg|svg|webp|json|js|css|woff|woff2|ttf|eot|map)$).*)",
       "destination": "/index.html"
     }
   ]

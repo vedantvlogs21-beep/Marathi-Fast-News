@@ -827,9 +827,10 @@ app.get("/robots.txt", (req: any, res: any) => {
   res.send(`User-agent: *\nAllow: /\n\nSitemap: https://marathi-fast-news.vercel.app/sitemap.xml`);
 });
 
-app.get("/sitemap.xml", async (req: any, res: any) => {
-  res.setHeader("Content-Type", "application/xml");
-  res.setHeader("Cache-Control", "public, max-age=0, s-maxage=86400, stale-while-revalidate=3600");
+app.get(["/sitemap.xml", "/sitemap.xml/"], async (req: any, res: any) => {
+  res.setHeader("Content-Type", "application/xml; charset=utf-8");
+  res.setHeader("Cache-Control", "public, max-age=0, s-maxage=3600");
+  res.setHeader("X-Robots-Tag", "noindex");
 
   const escapeXml = (str: string) => {
     return str.replace(/[<>&'"]/g, (c) => {
@@ -844,26 +845,33 @@ app.get("/sitemap.xml", async (req: any, res: any) => {
     });
   };
 
+  // Detect if request is from a bot/crawler — serve clean XML without XSL
+  const ua = (req.headers['user-agent'] || '').toLowerCase();
+  const isBot = /googlebot|bingbot|slurp|duckduckbot|baiduspider|yandexbot|facebot|ia_archiver|crawler|spider|robot/i.test(ua);
+
   try {
     let articles: any[] = [];
     try {
       articles = await db.prepare('SELECT id, publishedAt FROM articles ORDER BY publishedAt DESC').all() as any[];
     } catch (dbErr) {
-      console.error("Sitemap DB fetch error, falling back to static homepage sitemap:", dbErr);
+      console.error("Sitemap DB fetch error:", dbErr);
     }
-    
-     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    xml += `<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>\n`;
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    // Only add the XSL stylesheet for human browsers, NOT for bots
+    if (!isBot) {
+      xml += `<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>\n`;
+    }
     xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
-    
-    // Add homepage
+
+    // Homepage
     xml += `  <url>\n`;
     xml += `    <loc>https://marathi-fast-news.vercel.app/</loc>\n`;
     xml += `    <changefreq>daily</changefreq>\n`;
     xml += `    <priority>1.0</priority>\n`;
     xml += `  </url>\n`;
-    
-    // Add dynamic articles
+
+    // Dynamic articles
     articles.forEach(art => {
       let dateStr = new Date().toISOString().split('.')[0] + 'Z';
       if (art.publishedAt) {
@@ -872,9 +880,7 @@ app.get("/sitemap.xml", async (req: any, res: any) => {
           if (!isNaN(parsed.getTime())) {
             dateStr = parsed.toISOString().split('.')[0] + 'Z';
           }
-        } catch (e) {
-          // Fallback to current date
-        }
+        } catch (e) { /* Fallback to current date */ }
       }
       const safeId = escapeXml(encodeURIComponent(art.id));
       xml += `  <url>\n`;
@@ -884,12 +890,12 @@ app.get("/sitemap.xml", async (req: any, res: any) => {
       xml += `    <priority>0.8</priority>\n`;
       xml += `  </url>\n`;
     });
-    
+
     xml += `</urlset>`;
     res.send(xml);
   } catch (err) {
-    console.error("Sitemap generation critical error:", err);
-    res.status(500).send("Error generating sitemap");
+    console.error("Sitemap generation error:", err);
+    res.status(500).send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`);
   }
 });
 

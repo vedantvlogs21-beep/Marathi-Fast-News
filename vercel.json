@@ -15,6 +15,10 @@
   ],
   "rewrites": [
     {
+      "source": "/sitemap.xml",
+      "destination": "/server.ts"
+    },
+    {
       "source": "/sitemap.xsl",
       "destination": "/server.ts"
     },
@@ -31,7 +35,7 @@
       "destination": "/server.ts"
     },
     {
-      "source": "/((?!.*\\.(xml|xsl|txt|ico|png|jpg|svg|webp|json|js|css|woff|woff2|ttf|eot|map)$).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]

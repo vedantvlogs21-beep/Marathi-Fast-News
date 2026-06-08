@@ -828,12 +828,14 @@ app.get("/robots.txt", (req: any, res: any) => {
 });
 
 app.get(["/sitemap.xml", "/sitemap.xml/"], async (req: any, res: any) => {
-  res.setHeader("Content-Type", "application/xml; charset=utf-8");
-  res.setHeader("Cache-Control", "public, max-age=0, s-maxage=3600");
-  res.setHeader("X-Robots-Tag", "noindex");
+  // Set headers BEFORE anything else
+  res.setHeader("Content-Type", "text/xml; charset=utf-8");
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
 
   const escapeXml = (str: string) => {
-    return str.replace(/[<>&'"]/g, (c) => {
+    return String(str).replace(/[<>&'"]/g, (c) => {
       switch (c) {
         case '<': return '&lt;';
         case '>': return '&gt;';
@@ -845,10 +847,6 @@ app.get(["/sitemap.xml", "/sitemap.xml/"], async (req: any, res: any) => {
     });
   };
 
-  // Detect if request is from a bot/crawler — serve clean XML without XSL
-  const ua = (req.headers['user-agent'] || '').toLowerCase();
-  const isBot = /googlebot|bingbot|slurp|duckduckbot|baiduspider|yandexbot|facebot|ia_archiver|crawler|spider|robot/i.test(ua);
-
   try {
     let articles: any[] = [];
     try {
@@ -857,21 +855,15 @@ app.get(["/sitemap.xml", "/sitemap.xml/"], async (req: any, res: any) => {
       console.error("Sitemap DB fetch error:", dbErr);
     }
 
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    // Only add the XSL stylesheet for human browsers, NOT for bots
-    if (!isBot) {
-      xml += `<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>\n`;
-    }
-    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+    const lines: string[] = [];
+    lines.push('<?xml version="1.0" encoding="UTF-8"?>');
+    lines.push('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
+    lines.push('  <url>');
+    lines.push('    <loc>https://marathi-fast-news.vercel.app/</loc>');
+    lines.push('    <changefreq>daily</changefreq>');
+    lines.push('    <priority>1.0</priority>');
+    lines.push('  </url>');
 
-    // Homepage
-    xml += `  <url>\n`;
-    xml += `    <loc>https://marathi-fast-news.vercel.app/</loc>\n`;
-    xml += `    <changefreq>daily</changefreq>\n`;
-    xml += `    <priority>1.0</priority>\n`;
-    xml += `  </url>\n`;
-
-    // Dynamic articles
     articles.forEach(art => {
       let dateStr = new Date().toISOString().split('.')[0] + 'Z';
       if (art.publishedAt) {
@@ -880,22 +872,22 @@ app.get(["/sitemap.xml", "/sitemap.xml/"], async (req: any, res: any) => {
           if (!isNaN(parsed.getTime())) {
             dateStr = parsed.toISOString().split('.')[0] + 'Z';
           }
-        } catch (e) { /* Fallback to current date */ }
+        } catch (e) { /* use current date */ }
       }
-      const safeId = escapeXml(encodeURIComponent(art.id));
-      xml += `  <url>\n`;
-      xml += `    <loc>https://marathi-fast-news.vercel.app/?story=${safeId}</loc>\n`;
-      xml += `    <lastmod>${dateStr}</lastmod>\n`;
-      xml += `    <changefreq>weekly</changefreq>\n`;
-      xml += `    <priority>0.8</priority>\n`;
-      xml += `  </url>\n`;
+      const safeId = escapeXml(encodeURIComponent(String(art.id)));
+      lines.push('  <url>');
+      lines.push(`    <loc>https://marathi-fast-news.vercel.app/?story=${safeId}</loc>`);
+      lines.push(`    <lastmod>${dateStr}</lastmod>`);
+      lines.push('    <changefreq>weekly</changefreq>');
+      lines.push('    <priority>0.8</priority>');
+      lines.push('  </url>');
     });
 
-    xml += `</urlset>`;
-    res.send(xml);
+    lines.push('</urlset>');
+    res.end(lines.join('\n'));
   } catch (err) {
-    console.error("Sitemap generation error:", err);
-    res.status(500).send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`);
+    console.error("Sitemap error:", err);
+    res.end('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
   }
 });
 

@@ -673,6 +673,10 @@ app.get("/googlea4015d58ba6aed96.html", (req: any, res: any) => {
   res.send("google-site-verification: googlea4015d58ba6aed96.html");
 });
 
+app.get("/google5e1aeb200aeeae95.html", (req: any, res: any) => {
+  res.send("google-site-verification: google5e1aeb200aeeae95.html");
+});
+
 const sitemapXsl = `<?xml version="1.0" encoding="UTF-8"?>
 <xsl:stylesheet version="1.0" 
                 xmlns:html="http://www.w3.org/TR/REC-html40"
@@ -919,4 +923,3 @@ if (process.env.NODE_ENV !== "production" && process.env.VERCEL !== "1") {
 
 // Export the app for Vercel Serverless functions
 export default app;
-  

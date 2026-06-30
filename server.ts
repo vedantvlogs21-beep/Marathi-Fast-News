@@ -574,7 +574,7 @@ const preseededTranslations: { [key: string]: { [key: string]: string } } = {
         "no active alerts": "सध्या कोणतेही सक्रिय इशारे नाहीत.",
         "hello world": "नमस्कार जग",
         "hello, world!": "नमस्कार, जग!",
-        "marathi fast news": "मराठी फास्ट न्यूज",
+        "marathi fast news": "मराठा फास्ट न्यूज",
         "breaking alert": "महत्त्वाची बातमी",
         "Mumbai Metro Line 3 Phase 1 Commences Operations: Revolutionizing Urban Transit": "मुंबई मेट्रो मार्ग ३ च्या पहिल्या टप्प्याचे उद्घाटन: नागरी वाहतुकीत क्रांती",
         "Phase 1 of Mumbai Metro Line 3 (Aarey to BKC) is now operational. The 12.5 km underground line significantly cuts travel time and congestion in Mumbai.": "मुंबई मेट्रो मार्ग ३ चा पहिला टप्पा (आरे ते बीकेसी) आता कार्यान्वित झाला आहे. १२.५ किमीचा भुयारी मार्ग मुंबईतील प्रवासाची वेळ आणि वाहतूक कोंडी लक्षणीयरीत्या कमी करतो.",

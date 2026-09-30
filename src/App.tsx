@@ -8,8 +8,9 @@ import Header from './components/Header';
 import ArticleCard from './components/ArticleCard';
 import ArticleModal from './components/ArticleModal';
 import NotificationDrawer from './components/NotificationDrawer';
+import SettingsBottomSheet from './components/SettingsBottomSheet';
 import AdminPanel from './components/AdminPanel';
-import { Article, User, SystemNotification } from './types';
+import { Article, User, Comment, SystemNotification } from './types';
 import { getUITranslation, Language } from './utils/translation';
 
 export default function App() {
@@ -40,6 +41,8 @@ export default function App() {
 
   // The Hero spot always displays the absolute newest article published
   const featuredStory = articles[0];
+  // Hero image error state
+  const [heroImgError, setHeroImgError] = React.useState(false);
 
   useEffect(() => {
     // Instantly clear old translations so the new Hero article doesn't show old text
@@ -102,6 +105,10 @@ export default function App() {
   }, [selectedArticleId]);
 
   const [showNotifDrawer, setShowNotifDrawer] = useState(false);
+  const [showSettingsSheet, setShowSettingsSheet] = useState(false);
+  
+  // Customization State
+  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
 
   // General telemetry tracking
   const [loading, setLoading] = useState(true);
@@ -237,6 +244,7 @@ export default function App() {
         }}
         appLanguage={appLanguage}
         setAppLanguage={setAppLanguage}
+        onOpenSettings={() => setShowSettingsSheet(true)}
       />
 
       {/* Main Dynamic View Modules */}
@@ -253,12 +261,24 @@ export default function App() {
               >
                 {/* Visual background image wrapper */}
                 <div className="absolute inset-0">
-                  <img
-                    src={featuredStory.imageUrl}
-                    alt={featuredStory.title}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover brightness-[0.45] group-hover:scale-102 transition-transform duration-1000"
-                  />
+                  {(!heroImgError && !featuredStory.imageUrl.includes("1451187580459") && featuredStory.imageUrl) ? (
+                    <img
+                      src={featuredStory.imageUrl}
+                      alt={featuredStory.title}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover brightness-[0.45] group-hover:scale-102 transition-transform duration-1000"
+                      onError={() => setHeroImgError(true)}
+                    />
+                  ) : (
+                    <div className={`w-full h-full bg-gradient-to-br ${
+                      featuredStory.category === 'Technology' ? 'from-violet-800 to-indigo-950' :
+                      featuredStory.category === 'Politics'   ? 'from-rose-800 to-red-950' :
+                      featuredStory.category === 'Business'   ? 'from-sky-700 to-blue-950' :
+                      featuredStory.category === 'Sports'     ? 'from-amber-600 to-orange-950' :
+                      featuredStory.category === 'Science'    ? 'from-emerald-700 to-teal-950' :
+                                                               'from-pink-700 to-fuchsia-950'
+                    } opacity-80`} />
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent" />
                 </div>
 
@@ -360,9 +380,19 @@ export default function App() {
 
             {/* 3. Infinite Grid list */}
             {loading ? (
-              <div className="text-center py-20" id="feed-scroller-loading">
-                <div className="inline-block h-8 w-8 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin mb-4" />
-                <p className="text-xs text-slate-400 font-medium font-mono">{getUITranslation("syncing", appLanguage)}</p>
+              <div className="columns-1 md:columns-2 lg:columns-3 gap-6 animate-pulse" id="feed-scroller-loading">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="bg-white rounded-2xl p-4 border border-slate-100 flex flex-col h-[380px] break-inside-avoid mb-6">
+                    <div className="h-44 bg-slate-50 rounded-xl mb-4 w-full"></div>
+                    <div className="h-3 bg-slate-50 rounded-full w-1/4 mb-4"></div>
+                    <div className="h-5 bg-slate-50 rounded-full w-3/4 mb-2"></div>
+                    <div className="h-5 bg-slate-50 rounded-full w-5/6 mb-4"></div>
+                    <div className="mt-auto flex justify-between items-center pt-4 border-t border-slate-50">
+                      <div className="h-3 bg-slate-50 rounded-full w-1/3"></div>
+                      <div className="h-6 w-6 bg-slate-50 rounded-full"></div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : articles.length === 0 ? (
               <div className="bg-white rounded-3xl p-12 text-center border max-w-md mx-auto" id="feed-scroller-empty">
@@ -382,7 +412,7 @@ export default function App() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="feed-articles-grid-list">
+              <div className="columns-1 md:columns-2 lg:columns-3 gap-6" id="feed-articles-grid-list">
                 {articles.map(art => (
                   <ArticleCard
                     key={art.id}
@@ -443,7 +473,7 @@ export default function App() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="bookmarks-articles-grid">
+              <div className="columns-1 md:columns-2 lg:columns-3 gap-6" id="bookmarks-articles-grid">
                 {bookmarkedArticles.map(art => (
                   <ArticleCard
                     key={art.id}
@@ -472,8 +502,18 @@ export default function App() {
           onLike={handleLikeUpdate}
           onAddCommentCount={handleCommentCountUpdate}
           appLanguage={appLanguage}
+          fontSize={fontSize}
         />
       )}
+
+      {/* Settings Bottom Slide Panel */}
+      <SettingsBottomSheet
+        isOpen={showSettingsSheet}
+        onClose={() => setShowSettingsSheet(false)}
+        appLanguage={appLanguage}
+        fontSize={fontSize}
+        setFontSize={setFontSize}
+      />
 
       {showNotifDrawer && (
         <NotificationDrawer

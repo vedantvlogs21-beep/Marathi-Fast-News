@@ -10,6 +10,14 @@ import jwt from "jsonwebtoken";
 
 dotenv.config();
 
+// Prevent unhandled Node.js network errors from crashing the server
+process.on('uncaughtException', (err) => {
+    console.error('⚠️ Uncaught Exception prevented crash:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('⚠️ Unhandled Rejection prevented crash at:', promise, 'reason:', reason);
+});
+
 // Auto-initialize Turso database tables on startup
 initDb().catch(err => console.error("Database initialization failed:", err));
 
@@ -356,6 +364,9 @@ app.post("/api/upload", authenticateToken, requireAdmin, async (req, res) => {
                 const uploadPath = `uploads/${uniqueFilename}`;
                 const githubApiUrl = `https://api.github.com/repos/${githubOwner}/${githubRepo}/contents/${uploadPath}`;
 
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+
                 const ghResponse = await fetch(githubApiUrl, {
                     method: 'PUT',
                     headers: {
@@ -366,8 +377,11 @@ app.post("/api/upload", authenticateToken, requireAdmin, async (req, res) => {
                     body: JSON.stringify({
                         message: `Upload image: ${uniqueFilename} via CMS`,
                         content: cleanBase64
-                    })
+                    }),
+                    signal: controller.signal
                 });
+                
+                clearTimeout(timeoutId);
 
                 if (ghResponse.ok) {
                     const rawUrl = `https://raw.githubusercontent.com/${githubOwner}/${githubRepo}/main/${uploadPath}`;

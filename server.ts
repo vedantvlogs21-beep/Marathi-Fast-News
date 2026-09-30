@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { Article, Comment, User, SystemNotification, AnalyticsSummary } from "./src/types";
@@ -14,6 +15,18 @@ initDb().catch(err => console.error("Database initialization failed:", err));
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
+
+// Static uploads directory setup for local image hosting
+const uploadsDir = path.join(process.cwd(), "public", "uploads");
+if (!fs.existsSync(uploadsDir)) {
+    try {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+    } catch (e) {
+        console.warn("Could not create uploads directory:", e);
+    }
+}
+app.use("/uploads", express.static(uploadsDir));
+
 const PORT = Number(process.env.PORT) || 3000;
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_for_local_dev_12345";
@@ -315,7 +328,7 @@ app.post("/api/notifications/trigger-breaking", authenticateToken, requireAdmin,
 
 
 // ==========================================
-// Hybrid Storage: GitHub Image Upload API
+// Hybrid Storage: GitHub Image Upload API with Local Fallback
 // ==========================================
 
 app.post("/api/upload", authenticateToken, requireAdmin, async (req, res) => {
@@ -326,51 +339,76 @@ app.post("/api/upload", authenticateToken, requireAdmin, async (req, res) => {
             return res.status(400).json({ error: "Missing file data" });
         }
 
-        const githubToken = process.env.GITHUB_TOKEN;
-        const githubOwner = process.env.GITHUB_OWNER;
-        const githubRepo = process.env.GITHUB_REPO;
-
-        if (!githubToken || !githubOwner || !githubRepo) {
-            return res.status(500).json({
-                error: "Server configuration missing. Please add GITHUB_TOKEN, GITHUB_OWNER, and GITHUB_REPO to your .env file."
-            });
-        }
-
         // Clean base64 string if it contains the data URI scheme prefix
         const cleanBase64 = base64Data.replace(/^data:.*?;base64,/, "");
 
         const timestamp = Date.now();
-        const uniqueFilename = `${timestamp}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-        const uploadPath = `uploads/${uniqueFilename}`;
+        const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const uniqueFilename = `${timestamp}-${safeFilename}`;
 
-        const githubApiUrl = `https://api.github.com/repos/${githubOwner}/${githubRepo}/contents/${uploadPath}`;
+        const githubToken = process.env.GITHUB_TOKEN;
+        const githubOwner = process.env.GITHUB_OWNER;
+        const githubRepo = process.env.GITHUB_REPO;
 
-        const response = await fetch(githubApiUrl, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `token ${githubToken}`,
-                'Content-Type': 'application/json',
-                'User-Agent': 'MarathiFastNews-CMS'
-            },
-            body: JSON.stringify({
-                message: `Upload image: ${uniqueFilename} via CMS`,
-                content: cleanBase64
-            })
-        });
+        // Try GitHub upload first if token & repo configured
+        if (githubToken && githubOwner && githubRepo && !githubToken.includes("MY_")) {
+            try {
+                const uploadPath = `uploads/${uniqueFilename}`;
+                const githubApiUrl = `https://api.github.com/repos/${githubOwner}/${githubRepo}/contents/${uploadPath}`;
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("GitHub Upload Error:", errorText);
-            return res.status(502).json({ error: "Failed to upload to GitHub. Verify your Token and Repository Name." });
+                const ghResponse = await fetch(githubApiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${githubToken}`,
+                        'Content-Type': 'application/json',
+                        'User-Agent': 'MarathiFastNews-CMS'
+                    },
+                    body: JSON.stringify({
+                        message: `Upload image: ${uniqueFilename} via CMS`,
+                        content: cleanBase64
+                    })
+                });
+
+                if (ghResponse.ok) {
+                    const rawUrl = `https://raw.githubusercontent.com/${githubOwner}/${githubRepo}/main/${uploadPath}`;
+                    console.log(`✅ GitHub upload success: ${rawUrl}`);
+                    return res.status(201).json({ url: rawUrl });
+                } else {
+                    const errorText = await ghResponse.text();
+                    console.warn(`⚠️ GitHub Upload failed (HTTP ${ghResponse.status}), falling back to local storage. Reason: ${errorText.slice(0, 300)}`);
+                    if (ghResponse.status === 401) {
+                        console.error("❌ GitHub token is INVALID or EXPIRED. Update GITHUB_TOKEN in .env and restart the server.");
+                    } else if (ghResponse.status === 403) {
+                        console.error("❌ GitHub token lacks 'repo' permission. Regenerate with repo scope enabled.");
+                    } else if (ghResponse.status === 422) {
+                        console.warn("ℹ️ GitHub: File may already exist at this path (422). Retrying with local storage.");
+                    }
+                }
+            } catch (ghErr) {
+                console.warn("⚠️ GitHub upload network issue, falling back to local storage:", ghErr);
+            }
         }
 
-        // Return the raw URL (assuming main branch)
-        const rawUrl = `https://raw.githubusercontent.com/${githubOwner}/${githubRepo}/main/${uploadPath}`;
-
-        res.status(201).json({ url: rawUrl });
-    } catch (err) {
+        // Local Storage Fallback: Save directly into public/uploads
+        try {
+            const localUploadsDir = path.join(process.cwd(), "public", "uploads");
+            if (!fs.existsSync(localUploadsDir)) {
+                fs.mkdirSync(localUploadsDir, { recursive: true });
+            }
+            const localFilePath = path.join(localUploadsDir, uniqueFilename);
+            fs.writeFileSync(localFilePath, Buffer.from(cleanBase64, 'base64'));
+            return res.status(201).json({ url: `/uploads/${uniqueFilename}` });
+        } catch (fsErr: any) {
+            console.warn("Local storage write failed, checking data URI fallback:", fsErr);
+            // In read-only serverless environments, provide data URI if within reasonable size
+            if (base64Data.startsWith("data:") && base64Data.length < 500000) {
+                return res.status(201).json({ url: base64Data });
+            }
+            return res.status(500).json({ error: "Failed to store image on GitHub or local storage." });
+        }
+    } catch (err: any) {
         console.error("Upload crash:", err);
-        res.status(500).json({ error: "Internal server error during upload" });
+        res.status(500).json({ error: err.message || "Internal server error during upload" });
     }
 });
 
@@ -379,75 +417,117 @@ app.post("/api/upload", authenticateToken, requireAdmin, async (req, res) => {
 // ==========================================
 
 app.post("/api/articles", authenticateToken, requireAdmin, async (req, res) => {
-    const { title, content, category, source, imageUrl, author, isBreaking, videoUrl, location, mediaType } = req.body;
-    if (!title || !content || !category || !source || !author) {
-        return res.status(400).json({ error: "Missing required CMS setup fields" });
-    }
+    try {
+        const { title, content, summary, category, source, imageUrl, author, isBreaking, videoUrl, location, mediaType } = req.body;
+        if (!title || !content || !category || !source || !author) {
+            return res.status(400).json({ error: "Missing required CMS setup fields: Title, Content, Category, Source, and Author are required." });
+        }
 
-    const newArticle = {
-        id: "art-" + Date.now(),
-        title,
-        content,
-        summary: content.slice(0, 150) + "...",
-        category,
-        source,
-        imageUrl: imageUrl || "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80",
-        publishedAt: new Date().toISOString(),
-        author,
-        views: 1,
-        likes: 0,
-        isBreaking: isBreaking ? 1 : 0,
-        videoUrl: videoUrl || "",
-        location: location || null,
-        mediaType: mediaType || 'standard',
-        commentsCount: 0
-    };
+        const newArticle = {
+            id: "art-" + Date.now(),
+            title: String(title).trim(),
+            content: String(content).trim(),
+            summary: summary ? String(summary).trim() : (content.length > 150 ? content.slice(0, 150) + "..." : content),
+            category,
+            source: String(source).trim(),
+            imageUrl: imageUrl ? String(imageUrl).trim() : "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80",
+            publishedAt: new Date().toISOString(),
+            author: String(author).trim(),
+            views: 1,
+            likes: 0,
+            isBreaking: isBreaking ? 1 : 0,
+            videoUrl: videoUrl ? String(videoUrl).trim() : "",
+            location: location ? String(location).trim() : null,
+            mediaType: mediaType || 'standard',
+            commentsCount: 0
+        };
 
-    await db.prepare(`
-    INSERT INTO articles (id, title, content, summary, category, source, imageUrl, publishedAt, author, views, likes, isBreaking, videoUrl, commentsCount, location, mediaType)
-    VALUES (@id, @title, @content, @summary, @category, @source, @imageUrl, @publishedAt, @author, @views, @likes, @isBreaking, @videoUrl, @commentsCount, @location, @mediaType)
-  `).run(newArticle);
-
-    if (newArticle.isBreaking) {
         await db.prepare(`
-      INSERT INTO notifications (id, type, title, message, articleId, timestamp)
-      VALUES (?, 'breaking', 'BREAKING NEWS ALERT', ?, ?, ?)
-    `).run("notif-auto-" + Date.now(), `\${newArticle.title} - reported by \${newArticle.source}`, newArticle.id, new Date().toISOString());
-    }
+        INSERT INTO articles (id, title, content, summary, category, source, imageUrl, publishedAt, author, views, likes, isBreaking, videoUrl, commentsCount, location, mediaType)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+            newArticle.id,
+            newArticle.title,
+            newArticle.content,
+            newArticle.summary,
+            newArticle.category,
+            newArticle.source,
+            newArticle.imageUrl,
+            newArticle.publishedAt,
+            newArticle.author,
+            newArticle.views,
+            newArticle.likes,
+            newArticle.isBreaking,
+            newArticle.videoUrl,
+            newArticle.commentsCount,
+            newArticle.location,
+            newArticle.mediaType
+        );
 
-    broadcastSSE('refresh_content');
-    res.status(201).json({ ...newArticle, isBreaking: Boolean(newArticle.isBreaking) });
+        if (newArticle.isBreaking) {
+            try {
+                await db.prepare(`
+              INSERT INTO notifications (id, type, title, message, articleId, timestamp)
+              VALUES (?, 'breaking', 'BREAKING NEWS ALERT', ?, ?, ?)
+            `).run("notif-auto-" + Date.now(), `${newArticle.title} - reported by ${newArticle.source}`, newArticle.id, new Date().toISOString());
+            } catch (notifErr) {
+                console.warn("Failed to create breaking news notification:", notifErr);
+            }
+        }
+
+        try {
+            broadcastSSE('refresh_content');
+        } catch (sseErr) {
+            console.warn("SSE broadcast failed:", sseErr);
+        }
+
+        res.status(201).json({ ...newArticle, isBreaking: Boolean(newArticle.isBreaking) });
+    } catch (err: any) {
+        console.error("Error creating article:", err);
+        res.status(500).json({ error: err.message || "Failed to create article in database." });
+    }
 });
 
 app.put("/api/articles/:id", authenticateToken, requireAdmin, async (req, res) => {
-    const { id } = req.params;
-    const { title, content, summary, category, source, imageUrl, author, isBreaking, videoUrl, location, mediaType } = req.body;
+    try {
+        const { id } = req.params;
+        const { title, content, summary, category, source, imageUrl, author, isBreaking, videoUrl, location, mediaType } = req.body;
 
-    const info = await db.prepare(`
-    UPDATE articles SET 
-      title = COALESCE(?, title),
-      content = COALESCE(?, content),
-      summary = COALESCE(?, summary),
-      category = COALESCE(?, category),
-      source = COALESCE(?, source),
-      imageUrl = COALESCE(?, imageUrl),
-      author = COALESCE(?, author),
-      isBreaking = COALESCE(?, isBreaking),
-      videoUrl = COALESCE(?, videoUrl),
-      location = COALESCE(?, location),
-      mediaType = COALESCE(?, mediaType)
-    WHERE id = ?
-  `).run(
-        title, content, summary, category, source, imageUrl, author,
-        isBreaking !== undefined ? (isBreaking ? 1 : 0) : null,
-        videoUrl, location, mediaType, id
-    );
+        const info = await db.prepare(`
+        UPDATE articles SET 
+          title = COALESCE(?, title),
+          content = COALESCE(?, content),
+          summary = COALESCE(?, summary),
+          category = COALESCE(?, category),
+          source = COALESCE(?, source),
+          imageUrl = COALESCE(?, imageUrl),
+          author = COALESCE(?, author),
+          isBreaking = COALESCE(?, isBreaking),
+          videoUrl = COALESCE(?, videoUrl),
+          location = COALESCE(?, location),
+          mediaType = COALESCE(?, mediaType)
+        WHERE id = ?
+      `).run(
+            title || null, content || null, summary || null, category || null, source || null, imageUrl || null, author || null,
+            isBreaking !== undefined ? (isBreaking ? 1 : 0) : null,
+            videoUrl || null, location || null, mediaType || null, id
+        );
 
-    if (info.changes === 0) return res.status(404).json({ error: "Article not found" });
-    const article = await db.prepare('SELECT * FROM articles WHERE id = ?').get(id) as any;
-    article.isBreaking = Boolean(article.isBreaking);
-    broadcastSSE('refresh_content');
-    res.json({ message: "Article updated successfully", article });
+        if (info.changes === 0) return res.status(404).json({ error: "Article not found" });
+        const article = await db.prepare('SELECT * FROM articles WHERE id = ?').get(id) as any;
+        article.isBreaking = Boolean(article.isBreaking);
+        
+        try {
+            broadcastSSE('refresh_content');
+        } catch (sseErr) {
+            console.warn("SSE broadcast failed:", sseErr);
+        }
+
+        res.json({ message: "Article updated successfully", article });
+    } catch (err: any) {
+        console.error("Error updating article:", err);
+        res.status(500).json({ error: err.message || "Failed to update article in database." });
+    }
 });
 
 app.delete("/api/articles/:id", authenticateToken, requireAdmin, async (req, res) => {

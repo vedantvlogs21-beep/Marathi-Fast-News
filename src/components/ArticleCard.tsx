@@ -89,19 +89,41 @@ export default function ArticleCard({
     year: 'numeric'
   });
 
+  // Image error state: show placeholder when image fails to load
+  const [imgError, setImgError] = React.useState(false);
+  const isDefaultPlaceholder = article.imageUrl.includes("1451187580459");
+  const showRealImage = !imgError && !isDefaultPlaceholder && article.imageUrl;
+
   return (
     <article
       id={`article-card-${article.id}`}
-      className="group bg-white rounded-2xl overflow-hidden border border-slate-100/80 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col h-full"
+      className="group bg-white rounded-3xl overflow-hidden border border-slate-100 hover:border-slate-200 transition-all duration-300 flex flex-col shadow-none break-inside-avoid mb-6"
     >
-      {/* Article Image Accent Wrapper */}
-      <div className="relative aspect-video overflow-hidden bg-slate-100 object-cover cursor-pointer" onClick={onSelect}>
-        <img
-          src={article.imageUrl}
-          alt={article.title}
-          referrerPolicy="no-referrer"
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        />
+      {/* Article Image Accent Wrapper - always rendered */}
+      <div className="relative aspect-video overflow-hidden cursor-pointer" onClick={onSelect}>
+        {showRealImage ? (
+          <img
+            src={article.imageUrl}
+            alt={article.title}
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          // Gradient placeholder for default/missing/broken images
+          <div className={`w-full h-full flex items-end p-4 bg-gradient-to-br ${
+            article.category === 'Technology' ? 'from-violet-700 to-indigo-900' :
+            article.category === 'Politics'   ? 'from-rose-700 to-red-900' :
+            article.category === 'Business'   ? 'from-sky-600 to-blue-900' :
+            article.category === 'Sports'     ? 'from-amber-500 to-orange-800' :
+            article.category === 'Science'    ? 'from-emerald-600 to-teal-900' :
+                                               'from-pink-600 to-fuchsia-900'
+          }`}>
+            <span className="text-white/20 font-display font-black text-5xl uppercase tracking-tight leading-none select-none">
+              {article.category}
+            </span>
+          </div>
+        )}
         
         {/* Video Overlay Indicator */}
         {(article.mediaType === 'video' || (!article.mediaType && article.videoUrl)) && (
@@ -114,7 +136,7 @@ export default function ArticleCard({
         
         {/* Category Badge Indicator in Overlay */}
         <div className="absolute top-3 left-3 flex items-center space-x-1.5">
-          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-sm ${getCategoryTheme(article.category)}`}>
+          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-none ${showRealImage ? getCategoryTheme(article.category) : 'bg-white/20 text-white border-white/20 backdrop-blur-sm'}`}>
             {getUITranslation("category_" + article.category.toLowerCase(), language)}
           </span>
           {article.isBreaking && (
@@ -133,8 +155,8 @@ export default function ArticleCard({
       </div>
 
       {/* Content Section */}
-      <div className="p-5 flex-1 flex flex-col justify-between" id={`card-content-${article.id}`}>
-        <div>
+      <div className="p-5 flex flex-col h-full" id={`card-content-${article.id}`}>
+        <div className="flex-grow">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-400 font-mono mb-2">
             <span>{article.author}</span>
             <span>•</span>
@@ -142,7 +164,7 @@ export default function ArticleCard({
             {article.location && (
               <>
                 <span>•</span>
-                <span className="flex items-center text-indigo-500 font-bold bg-indigo-50 px-1.5 py-0.5 rounded shadow-sm border border-indigo-100">
+                <span className="flex items-center text-indigo-500 font-bold bg-indigo-50/50 px-1.5 py-0.5 rounded border border-indigo-100/50">
                   <MapPin className="h-2.5 w-2.5 mr-1" />
                   {article.location}
                 </span>
@@ -178,7 +200,8 @@ export default function ArticleCard({
         </div>
 
         {/* Stats and bookmark tools footer bar */}
-        <div className="pt-3 border-t border-slate-50 flex items-center justify-between" id={`card-footer-${article.id}`}>
+        <div className="pt-3 mt-4 border-t border-slate-50 flex items-center justify-between" id={`card-footer-${article.id}`}>
+          {/* Spacer to keep layout consistent now that image always shows */}
           <div className="flex items-center space-x-3 text-[11px] text-slate-400 font-mono">
             <span className="flex items-center space-x-1">
               <Eye className="h-3.5 w-3.5" />

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   X, Eye, Heart, MessageSquare, Compass, Radio, Sparkles, 
   Share2, Twitter, Facebook, ExternalLink, Link2, Check, Send,
-  Languages
+  Languages, Maximize2, Minimize2
 } from 'lucide-react';
 import { Article, Comment, User } from '../types';
 import { getUITranslation, Language } from '../utils/translation';
@@ -15,6 +15,7 @@ interface ArticleModalProps {
   onLike: (id: string, updatedLikes: number) => void;
   onAddCommentCount: (id: string, newCount: number) => void;
   appLanguage: Language;
+  fontSize?: 'small' | 'medium' | 'large';
 }
 
 export default function ArticleModal({
@@ -24,7 +25,8 @@ export default function ArticleModal({
   onClose,
   onLike,
   onAddCommentCount,
-  appLanguage
+  appLanguage,
+  fontSize = 'medium'
 }: ArticleModalProps) {
   const [article, setArticle] = useState<Article | null>(() => {
     return articles.find(a => a.id === articleId) || null;
@@ -49,6 +51,9 @@ export default function ArticleModal({
   const [translatedContent, setTranslatedContent] = useState('');
   const [isTranslatingArticle, setIsTranslatingArticle] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState<'en' | 'mr'>('en');
+  const [isDistractionFree, setIsDistractionFree] = useState(false);
+  // Image error fallback state
+  const [modalImgError, setModalImgError] = useState(false);
 
   // Automatically fetch translation when appLanguage/global language changes to mr
   useEffect(() => {
@@ -267,20 +272,32 @@ export default function ArticleModal({
   });
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 md:p-6" id="article-cover-modal">
-      <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 flex flex-col transform transition-all duration-300">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 md:p-6 print:absolute print:inset-0 print:bg-white print:p-0 print:flex-col print:overflow-visible" id="article-cover-modal">
+      <div className={`bg-white rounded-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col transform transition-all duration-500 print:max-h-none print:shadow-none print:rounded-none print:max-w-full print:border-0 print:overflow-visible ${isDistractionFree ? 'max-w-3xl border-0' : 'max-w-4xl border border-slate-100'}`}>
         
         {/* Sticky Close Header banner */}
-        <div className="sticky top-0 bg-white/95 backdrop-blur-md px-6 py-4 border-b border-slate-150 flex items-center justify-between z-10">
-          <div className="flex items-center space-x-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 border text-slate-700">
-              {getUITranslation("category_" + article.category.toLowerCase(), appLanguage)}
-            </span>
-            {article.isBreaking && (
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-650 text-white animate-pulse">
-                {getUITranslation("breaking_alert", appLanguage)}
-              </span>
+        <div className={`sticky top-0 bg-white/95 backdrop-blur-md px-6 py-4 border-b flex items-center justify-between z-10 transition-colors print:hidden ${isDistractionFree ? 'border-transparent' : 'border-slate-150'}`}>
+          <div className="flex items-center space-x-2">
+            {!isDistractionFree && (
+              <>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-50 border border-slate-100 text-slate-500">
+                  {getUITranslation("category_" + article.category.toLowerCase(), appLanguage)}
+                </span>
+                {article.isBreaking && (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-50 text-red-600 border border-red-100">
+                    {getUITranslation("breaking_alert", appLanguage)}
+                  </span>
+                )}
+              </>
             )}
+            <button
+              onClick={() => setIsDistractionFree(!isDistractionFree)}
+              className="p-1.5 text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors flex items-center space-x-1.5 cursor-pointer"
+              title="Toggle Distraction-Free Reading"
+            >
+              {isDistractionFree ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              <span className="text-[10px] font-medium hidden sm:inline">{isDistractionFree ? "Exit Focus Mode" : "Focus Mode"}</span>
+            </button>
           </div>
           
           <button
@@ -318,8 +335,9 @@ export default function ArticleModal({
             </div>
           </div>
 
-          {/* Broadcast / Media Segment Selection */}
-          <div className="relative rounded-2xl overflow-hidden bg-slate-950 border border-slate-900 shadow-md">
+          {/* Broadcast / Media Segment Selection - always shown */}
+          {!isDistractionFree && (
+            <div className="relative rounded-3xl overflow-hidden bg-slate-950 border border-slate-900 shadow-none print:hidden">
             
             {isPlayingStream && article.videoUrl ? (
               <div className="aspect-video w-full relative">
@@ -343,12 +361,29 @@ export default function ArticleModal({
               </div>
             ) : (
               <div className="relative aspect-video w-full">
-                <img
-                  src={article.imageUrl}
-                  alt={article.title}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover brightness-[0.82] transition-transform duration-700"
-                />
+                {/* Show real image or gradient placeholder */}
+                {(!modalImgError && !article.imageUrl.includes('1451187580459') && article.imageUrl) ? (
+                  <img
+                    src={article.imageUrl}
+                    alt={article.title}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover brightness-[0.82] transition-transform duration-700"
+                    onError={() => setModalImgError(true)}
+                  />
+                ) : (
+                  <div className={`w-full h-full flex items-end p-6 bg-gradient-to-br ${
+                    article.category === 'Technology' ? 'from-violet-700 to-indigo-900' :
+                    article.category === 'Politics'   ? 'from-rose-700 to-red-900' :
+                    article.category === 'Business'   ? 'from-sky-600 to-blue-900' :
+                    article.category === 'Sports'     ? 'from-amber-500 to-orange-800' :
+                    article.category === 'Science'    ? 'from-emerald-600 to-teal-900' :
+                                                       'from-pink-600 to-fuchsia-900'
+                  }`}>
+                    <span className="text-white/15 font-display font-black text-8xl uppercase tracking-tight leading-none select-none">
+                      {article.category}
+                    </span>
+                  </div>
+                )}
 
                 {article.videoUrl && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center select-none bg-gradient-to-t from-slate-950/80 via-transparent to-transparent">
@@ -370,9 +405,11 @@ export default function ArticleModal({
               </div>
             )}
           </div>
+          )}
 
           {/* Social sharing and rating floating rail */}
-          <div className="flex items-center justify-between py-3 border-y border-slate-100 bg-slate-50/50 px-4 rounded-xl" id="modal-social-actions-bar">
+          {!isDistractionFree && (
+            <div className="flex items-center justify-between py-3 border-y border-slate-50 bg-slate-50/50 px-4 rounded-xl print:hidden" id="modal-social-actions-bar">
             
             {/* Left stats: increment likes manually with responsive state */}
             <div className="flex items-center space-x-4">
@@ -432,9 +469,10 @@ export default function ArticleModal({
             </div>
 
           </div>
+          )}
 
           {/* Main Editorial Content */}
-          <div className="space-y-4">
+          <div className={`space-y-4 print:block ${isDistractionFree ? 'py-8 px-4 md:px-12 leading-loose' : ''}`}>
             <h3 className="font-display font-bold text-slate-900 border-b pb-2 hidden">Main Article Information</h3>
             
             {isTranslatingArticle ? (
@@ -449,17 +487,23 @@ export default function ArticleModal({
                 <div className="h-4 bg-slate-100 rounded w-4/5 animate-pulse" />
               </div>
             ) : (
-              <p className="text-sm md:text-base text-slate-700 leading-relaxed font-sans first-letter:text-4xl first-letter:font-extrabold first-letter:float-left first-letter:mr-2.5 first-letter:font-display animate-fade-in">
+              <p className={`text-slate-800 font-sans first-letter:text-4xl first-letter:font-extrabold first-letter:float-left first-letter:mr-2.5 first-letter:font-display animate-fade-in print:text-black print:text-base ${
+                isDistractionFree 
+                  ? fontSize === 'large' ? 'text-2xl leading-[2.2]' : fontSize === 'small' ? 'text-base leading-loose' : 'text-xl leading-loose tracking-wide' 
+                  : fontSize === 'large' ? 'text-lg leading-relaxed' : fontSize === 'small' ? 'text-sm leading-relaxed' : 'text-base leading-relaxed'
+              }`}>
                 {currentLanguage === 'mr' ? translatedContent : article.content}
               </p>
             )}
             
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center space-x-3 text-xs leading-relaxed text-slate-500">
-              <Compass className="h-5 w-5 text-slate-400 shrink-0" />
-              <p>
-                {getUITranslation("p_verfied_under", appLanguage)} {article.source} {getUITranslation("p_details", appLanguage)}
-              </p>
-            </div>
+            {!isDistractionFree && (
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center space-x-3 text-xs leading-relaxed text-slate-500">
+                <Compass className="h-5 w-5 text-slate-400 shrink-0" />
+                <p>
+                  {getUITranslation("p_verfied_under", appLanguage)} {article.source} {getUITranslation("p_details", appLanguage)}
+                </p>
+              </div>
+            )}
           </div>
 
 
